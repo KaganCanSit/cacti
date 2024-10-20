@@ -27,8 +27,8 @@ Before starting, make sure you have the following software installed on your hos
 - Curl: _install using package manager, like `apt` on Debian/Ubuntu Linux_
 - Git: [sample instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Docker: [sample instructions](https://docs.docker.com/engine/install/) (Latest version)
-- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher, but lower than version V2)
-- Golang: [sample instructions](https://golang.org/dl/) (Version 1.16 or higher)
+- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 2 or higher)
+- Golang: [sample instructions](https://golang.org/dl/) (Version 1.20 or higher)
 - Java (JDK and JRE): [sample instructions](https://openjdk.java.net/install/) (Version 8)
 - Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 16 Supported)
 - Yarn: [sample instructions](https://classic.yarnpkg.com/en/docs/install/)
@@ -36,8 +36,8 @@ Before starting, make sure you have the following software installed on your hos
     * Default method: Run the following with `sudo` if necessary. This will install both the protobuf compiler and the Go code generator plugins.
       ```
       apt-get install protobuf-compiler
-      go install google.golang.org/protobuf/cmd/protoc-gen-go
-      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
       ```
     * If the above method installs an older version of `protoc` (check using `protoc --version`), say below 3.12.x, you should download pre-compiled binaries instead. (With an older version, you may see errors while attempting to launch and setup the Fabric networks).
       ```
@@ -46,12 +46,14 @@ Before starting, make sure you have the following software installed on your hos
       sudo apt-get install unzip
       unzip protoc-3.15.6-linux-x86_64.zip -d <some-folder-path>
       export PATH="$PATH:<some-folder-path>/bin"
-      go install google.golang.org/protobuf/cmd/protoc-gen-go
-      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
       ```
+
       | Notes |
       |:------|
       | The latest version at present is `3.15.6`, but you should check the above link to find the most current version before running the above steps. |
+      | The latest version of `protoc-gen-go-grpc` that works with the Fabric test networks we will run below is `v1.4.0`, which is why that version is hardcoded here. |
 
 ### Credentials
 Make sure you have an SSH or GPG key registered in https://github.com to allow seamless cloning of repositories (at present, various setup scripts clone repositories using the `https://` prefix but this may change to `git@` in the future).
@@ -166,12 +168,12 @@ Follow the instructions below to build and launch the networks:
 | If you do not wish to test Fabric-Fabric interoperation, you can choose to launch only one of the two networks along with its interoperation chaincode. For `network1`, run `make start-interop-network1-local`, and for `network2`, run `make start-interop-network2-local` |
 | If you wish to enable end-to-end confidentiality by default in the interoperation modules that are deployed during network launch, set the environment variable `E2E_CONFIDENTIALITY` to `true` in the command line as follows: `E2E_CONFIDENTIALITY=true make start-interop-local` |
 
-For more information, refer to the associated [README](https://github.com/hyperledger/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
+For more information, refer to the associated [README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
 
 **Troubleshooting Tips**:
 
 - If you see any errors during the launches, re-check the prerequisites (software installations and credentials). Ensure your network connection is working. As a safe bet, you can retry after cleanup: kill and remove all Docker containers and associated volumes.
-- If `protoc` or `protoc-gen-go` throws an error, reinstall `protoc` and `protoc-gen-go` using suggestions made in the Prerequisites section above.
+- If `protoc` or `protoc-gen-go` throws an error, reinstall `protoc`, `protoc-gen-go`, and `protoc-gen-go-grpc` using suggestions made in the Prerequisites section above.
 
 ### Fabric Relay
 
@@ -217,7 +219,7 @@ make build-server-local
   make convert-compose-method1
   ```
 
-For more information, see the [relay-docker README](https://github.com/hyperledger/cacti/tree/main/weaver/core/relay/relay-docker.md).
+For more information, see the [relay-docker README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/core/relay/relay-docker.md).
 
 ### Fabric Driver
 
@@ -273,6 +275,7 @@ make build-image-local
 #### Deployment
 
 Use the following steps to run Fabric IIN Agents in Docker containers:
+
 * The `.env.n1.org1` and `.env.n1.org1.tls` files in the `docker-testnet/envs` directory contain environment variables used by the iin-agent of `org1` of `network1` at startup and runtime. Edit either of these files (depending on whether you wish to start the relay with or without TLS) as follows:
     - Replace `<PATH-TO-WEAVER>` with the absolute path of the `weaver` folder within your Cacti repository clone.
     - Update the following value:
@@ -439,7 +442,7 @@ Navigate to the `weaver/core/relay` folder. Refer [here](#building-relay-image) 
   ```
 * The `.env.corda` and `.env.corda.tls` files in the `docker/testnet-envs` directory contain environment variables used by the `Corda_Network` relay at startup and runtime. Edit either of these files (depending on whether you wish to start the relay with or without TLS), and update the following value:
   ```
-  DOCKER_IMAGE_NAME=weaver-relay-server
+  DOCKER_IMAGE_NAME=cacti-weaver-relay-server
   ```
 * Repeat the above step for `.env.corda2` or `.env.corda2.tls` in `docker/testnet-envs` directory, which contain environment variables for the `Corda_Network2` relay.
 * To deploy the relay server for `Corda_Network` without TLS, run:

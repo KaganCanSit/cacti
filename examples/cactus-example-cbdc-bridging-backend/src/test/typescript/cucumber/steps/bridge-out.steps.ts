@@ -1,8 +1,13 @@
 import { When, Then } from "cucumber";
-import { expect } from "chai";
 import axios from "axios";
 import CryptoMaterial from "../../../../crypto-material/crypto-material.json";
-import { getUserFromPseudonim, getFabricId, getEthAddress } from "./common";
+import {
+  getUserFromPseudonim,
+  getFabricId,
+  getEthAddress,
+  assertEqual,
+  assertStringContains,
+} from "./common";
 
 const MAX_RETRIES = 5;
 const MAX_TIMEOUT = 5000;
@@ -28,7 +33,7 @@ Then(
       },
     );
 
-    expect(parseInt(response.data.functionOutput)).to.equal(amount);
+    assertEqual(parseInt(response.data.functionOutput), amount);
   },
 );
 
@@ -55,7 +60,7 @@ When(
     };
 
     const response = await axios.post(
-      "http://127.0.0.1:4000/api/v1/@hyperledger/cactus-plugin-odap-hermes/clientrequest",
+      "http://127.0.0.1:4000/api/v1/@hyperledger/cactus-plugin-satp-hermes/clientrequest",
       {
         clientGatewayConfiguration: {
           apiHost: `http://127.0.0.1:4000`,
@@ -89,7 +94,7 @@ When(
       },
     );
 
-    expect(response.status).to.equal(200);
+    assertEqual(response.status, 200);
   },
 );
 
@@ -118,7 +123,7 @@ Then(
 
     await axios
       .post(
-        "http://127.0.0.1:4000/api/v1/@hyperledger/cactus-plugin-odap-hermes/clientrequest",
+        "http://127.0.0.1:4000/api/v1/@hyperledger/cactus-plugin-satp-hermes/clientrequest",
         {
           clientGatewayConfiguration: {
             apiHost: `http://127.0.0.1:4000`,
@@ -152,7 +157,7 @@ Then(
         },
       )
       .catch((err) => {
-        expect(err.response.data.error).to.contain(failureReason);
+        assertStringContains(err.response.data.error, failureReason);
       });
   },
 );

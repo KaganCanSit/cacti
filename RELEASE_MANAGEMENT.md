@@ -30,14 +30,17 @@ git rebase upstream/main
 git push --force-with-lease
 git checkout -b release-v1.1.3
 yarn run configure
-yarn lerna version 1.1.3 --ignore-scripts --conventional-commits --exact --git-remote upstream --message="chore(release): publish %s" --no-push --no-git-tag-version --no-ignore-changes --force-publish
-yarn tools:bump-openapi-spec-dep-versions
+yarn lerna version 1.1.3 --ignore-scripts --conventional-commits --exact --git-remote upstream --message="chore(release): publish %s" --no-push --no-git-tag-version --no-ignore-changes
+yarn tools:bump-openapi-spec-dep-versions --target-version=1.1.3
 yarn codegen
+yarn build:dev
 ./tools/weaver-update-version.sh 1.1.3 .
 ./tools/go-gen-checksum.sh 1.1.3 .
 ```
 
 - Do note the `.` as the last parameter in last two commands.
+
+- The `./tools/weaver-update-version.sh` automation script seems slightly buggy at the moment so you'll have to manually update `./weaver/core/relay/Cargo.toml` yourself. See this comment for an example: https://github.com/hyperledger-cacti/cacti/pull/3427#discussion_r1686850372
 
 - Double check that all of the package dependencies were updated from the previous
 version to the new one because lerna usually fails to do that for `devDependency` parts
@@ -45,7 +48,7 @@ of the package.json files so you have to do this manually with search and replac
 the entire repository...
 
 The trick is to search for the previous release version within package.json 
-files or just search for "@hyperledger/cactus-*" within the package.json files. 
+files or just search for "@hyperledger/cact*-*" within the package.json files. 
 
 With VSCode you can do a project wide search & replace where:
   1. Make sure that regex based replacing is enabled on the VSCode search UI (top right corner of the search panel)
@@ -54,6 +57,8 @@ With VSCode you can do a project wide search & replace where:
   4. You set the replacement term to this (so that it swaps the version numbers with the new one) `@hyperledger/cactus-$1: "1.1.3"`
 
 - Also double check that the `"version": "?.?.?"` property has been updated in the package.json files all over the packages.
+
+- Finally a generic full-text search project-wide for the previous version string `?.?.?` where you exclude these from the results: `CHANGELOG.md,go.sum,go.mod,yarn.lock,package-lock.json,.yarn/,weaver/core/relay/Cargo.toml` and then replace the findings with the new version such as `1.1.3`
 
 - update the lock file if necessary
     ```sh
@@ -66,9 +71,9 @@ With VSCode you can do a project wide search & replace where:
     ```
 
 - Double check that the changelog does not contain your fork's links instead of the upstream repo. You'll need to change this manually otherwise. For example, replace: 
-    - `https://github.com/petermetz/cactus` 
+    - `https://github.com/petermetz/cact` 
     with 
-    - `https://github.com/hyperledger/cactus`
+    - `https://github.com/hyperledger/cact`
 
 ```sh
 git add . && git commit --signoff --gpg-sign --message="chore(release): publish v1.1.3"
@@ -77,6 +82,14 @@ git push --set-upstream upstream release-v1.1.3
 
 ### Then create a PR here - once that's merged, rebase onto upstream/main and:
 
+**IMPORTANT**: Do not enable auto-merging on GitHub for the pull request doing the release.
+The problem with auto-merging here is that it would modify the release commit's SHA as the
+rebase would happen on GitHub's servers where your git signing identity is not available to use
+given that GitHub does (should) not have access to your private key for signing.
+The way the preserve your commit signature as valid the commit SHA must remain the same and the
+way to achieve this is to perform the pull request merging with fast forward. The merging
+ensures that there is no commit SHA change and the `--ff-only` option ensures that there is no
+merge commit to throw a wrench in the process.
 
 1. Do a merge freeze
 2. Unfreeze the specific pull request that you just opened for the release issuance

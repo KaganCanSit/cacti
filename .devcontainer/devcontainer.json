@@ -9,25 +9,24 @@
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
 			"moby": true,
 			"installDockerBuildx": true,
-			"version": "20.10.24",
+			"version": "26.1.4",
 			"dockerDashComposeVersion": "v2"
 		},
 		"ghcr.io/devcontainers/features/git:1": {
 			"ppa": true,
-			"version": "2.40.1"
+			"version": "lts"
 		},
 		"ghcr.io/devcontainers/features/go:1": {
 			"version": "1.20.6"
 		},
 		"ghcr.io/devcontainers/features/java:1": {
 			"installGradle": true,
-			"installMaven": false,
+			"installMaven": true,
 			"installAnt": false,
-			"version": "8.0.392-amzn",
-			"jdkDistro": "amzn",
-			"gradleVersion": "5.6.4",
-			"mavenVersion": "3.9.5",
-			"antVersion": "1.10.13"
+			"version": "17.0.9-tem",
+			"jdkDistro": "tem",
+			"gradleVersion": "8.1.1",
+			"mavenVersion": "3.9.5"
 		},
 		"ghcr.io/devcontainers/features/node:1": {
 			"nodeGypDependencies": true,
@@ -40,6 +39,9 @@
 		"ghcr.io/devcontainers-contrib/features/curl-apt-get:1": {},
 		"ghcr.io/devcontainers-contrib/features/protoc:1": {
 			"version": "v3.20.3"
+		},
+		"ghcr.io/dhoeric/features/trivy:1.0.0": {
+			"version": "0.52.1"
 		}
 	},
 	"customizations": {
@@ -59,7 +61,8 @@
 				"eamodio.gitlens",
 				"streetsidesoftware.code-spell-checker",
 				"github.vscode-pull-request-github",
-				"codeandstuff.package-json-upgrade"
+				"codeandstuff.package-json-upgrade",
+				"AquaSecurityOfficial.trivy-vulnerability-scanner"
 			]
 		}
 	},	

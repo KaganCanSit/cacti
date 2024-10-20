@@ -4,7 +4,7 @@ import path from "path";
 import JSON5 from "json5";
 import fs from "fs-extra";
 import { globby, Options as GlobbyOptions } from "globby";
-import { RuntimeError } from "run-time-error-cjs";
+import { RuntimeError } from "run-time-error";
 import { readFile } from "fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +40,12 @@ const main = async (argv: string[], env: NodeJS.ProcessEnv) => {
   const globbyOptions: GlobbyOptions = {
     cwd: PROJECT_DIR,
     absolute: true,
+    ignore: [
+      "**/packages/cacti-plugin-weaver-driver-fabric/**",
+      "**/weaver/common/protos-js/**",
+      "**/weaver/samples/besu/simpleasset/**",
+      "**/weaver/samples/besu/simplestate/**",
+    ], // Follow-up issue regarding these hardcoded paths (https://github.com/hyperledger-cacti/cacti/issues/3366)
   };
   const pkgJsonPaths = await globby(pkgJsonGlobPatterns, globbyOptions);
   console.log(`Package paths (${pkgJsonPaths.length}): `, pkgJsonPaths);
@@ -70,7 +76,7 @@ const main = async (argv: string[], env: NodeJS.ProcessEnv) => {
 
     const pkg = await fs.readJson(pkgJsonPath);
 
-    const deps = Object.keys(pkg.dependencies).filter((it) =>
+    const deps = Object.keys(pkg.dependencies || {}).filter((it) =>
       it.startsWith("@hyperledger/cactus-"),
     );
 

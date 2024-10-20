@@ -11,35 +11,49 @@ env:
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_call:
+    inputs:
+      run_all:
+        required: true
+        type: string
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: data-sharing-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  check_code_changed:
+    outputs:
+      status: ${{ steps.changes.outputs.weaver_code_changed }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            weaver_code_changed:
+              - './weaver/**'
+              - '.github/workflows/test_weaver-data-sharing.yaml'
+
   data-sharing:
-    if: ${{ false }}
+    needs: check_code_changed
+    if: ${{ false && needs.check_code_changed.outputs.status == 'true' }}
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
-      - name: Set up JDK 8
+      - name: Set up JDK 17
         uses: actions/setup-java@v3.11.0
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Go
@@ -48,7 +62,7 @@ jobs:
           go-version: '1.20.2'
 
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
 
@@ -71,9 +85,7 @@ jobs:
         working-directory: weaver/tests/network-setups/corda
 
       - name: Start Corda Network
-        run: |
-          sed -i "/docker logs corda_partya_1 -f/"' s/^/#/' "scripts/start-nodes.sh"
-          make start &> corda-net.out &
+        run: make start &> corda-net.out &
         working-directory: weaver/tests/network-setups/corda
 
       # FABRIC NETWORK
@@ -168,17 +180,20 @@ jobs:
           sed -i "s/<personal-access-token>/${{ secrets.GITHUB_TOKEN }}/g" .npmrc
           cat .npmrc
         working-directory: weaver/samples/fabric/fabric-cli
+
       - name: Build Fabric CLI
         run: |
           npm install --global yarn
           make build
         working-directory: weaver/samples/fabric/fabric-cli
+
       - name: Setup Fabric CLI Config
         run: |
           echo ${GITHUB_WORKSPACE}
           cp config.template.json config.json
           sed -i "s#<PATH-TO-WEAVER>#${GITHUB_WORKSPACE}/weaver#g" config.json
         working-directory: weaver/samples/fabric/fabric-cli
+
       - name: Setup Fabric CLI ENV
         run: |
           echo ${GITHUB_WORKSPACE}
@@ -227,11 +242,11 @@ jobs:
           # CORDA2-CORDA
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients request-state localhost:9082 relay-corda:9081/Corda_Network/corda_partya_1:10003#com.cordaSimpleApplication.flow.GetStateByKey:C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients get-state C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           # CORDA - FABRIC1
@@ -323,11 +338,11 @@ jobs:
           cp chaincode.json.template chaincode.json
           sed -i "s/\"args\"\: \[\"a\"/\"args\"\: \[\"C\"/g" chaincode.json
           ./bin/fabric-cli interop --local-network=network2 --sign=true --requesting-org=Org1MSP relay-corda:9081/Corda_Network/corda_partya_1:10003#com.cordaSimpleApplication.flow.GetStateByKey:C --debug=true &> tmp.out
-          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           ./bin/fabric-cli chaincode query mychannel simplestate read '["C"]' --local-network=network2 &> tmp.out
-          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
 
@@ -341,60 +356,88 @@ jobs:
           fi
         working-directory: weaver/samples/fabric/fabric-cli
 
-      - name: DEBUG Logs - corda partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda partya
         run: docker logs corda_partya_1
 
-      - name: DEBUG Logs - corda network2 partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda network2 partya
         run: docker logs corda_network2_partya_1
 
-      - name: DEBUG Logs - fabric n1 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 relay
         run: docker logs relay-network1
 
-      - name: DEBUG Logs - fabric n2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 relay
         run: docker logs relay-network2
 
-      - name: DEBUG Logs - corda relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda relay
         run: docker logs relay-corda
 
-      - name: DEBUG Logs - corda2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 relay
         run: docker logs relay-corda2
 
-      - name: DEBUG Logs - fabric n1 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 driver
         run: docker logs driver-fabric-network1
 
-      - name: DEBUG Logs - fabric n2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 driver
         run: docker logs driver-fabric-network2
 
-      - name: DEBUG Logs - corda driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda driver
         run: docker logs driver-corda-Corda_Network
 
-      - name: DEBUG Logs - corda2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 driver
         run: docker logs driver-corda-Corda_Network2
 
+      - if: failure()
+        name: DEBUG Logs - iin agent n1 org1
+        run: docker logs iin-agent-Org1MSP-network1
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n2 org1
+        run: docker logs iin-agent-Org1MSP-network2
+
   data-sharing-docker-local:
-    # if: ${{ false }}
+    needs: check_code_changed
+    if:  inputs.run_all == 'true' || needs.check_code_changed.outputs.status == 'true'
+    env:
+      FREE_UP_GITHUB_RUNNER_DISK_SPACE_DISABLED: false
+      CONFIGURE_DISABLED: true
+      TOOLS_VALIDATE_BUNDLE_NAMES_DISABLED: true
+      CUSTOM_CHECKS_DISABLED: true
+      JEST_TEST_RUNNER_DISABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+      DUMP_DISK_USAGE_INFO_DISABLED: true
+      FULL_BUILD_DISABLED: true
+      CHECK_WORK_TREE_STATUS_DISABLED: true
+
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
-      - name: Set up JDK 8
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            weaver_code_changed:
+              - './weaver/**'
+              - '.github/workflows/test_weaver-data-sharing.yaml'
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v3.11.0
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Go
@@ -403,7 +446,7 @@ jobs:
           go-version: '1.20.2'
 
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
 
@@ -411,8 +454,12 @@ jobs:
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.6/protoc-3.15.6-linux-x86_64.zip
           unzip protoc-3.15.6-linux-x86_64.zip -d protoc
+          rm -rf protoc-3.15.6-linux-x86_64.zip
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
+
+      - name: CI script for cleanup
+        run: ./tools/ci.sh
 
       # PROTOS
       - name: Build GO Protos
@@ -470,9 +517,7 @@ jobs:
         working-directory: weaver/core/identity-management/iin-agent
 
       - name: Start Corda Network
-        run: |
-          sed -i "/docker logs corda_partya_1 -f/"' s/^/#/' "scripts/start-nodes.sh"
-          make start-local &> corda-net.out &
+        run: make start-local &> corda-net.out &
         working-directory: weaver/tests/network-setups/corda
 
       # FABRIC NETWORK
@@ -585,6 +630,7 @@ jobs:
           cp config.template.json config.json
           sed -i "s#<PATH-TO-WEAVER>#${GITHUB_WORKSPACE}/weaver#g" config.json
         working-directory: weaver/samples/fabric/fabric-cli
+
       - name: Setup Fabric CLI ENV
         run: |
           echo ${GITHUB_WORKSPACE}
@@ -603,12 +649,12 @@ jobs:
         run: |
           ./bin/fabric-cli configure membership --local-network=network1 --target-network=network2 --iin-agent-endpoint=localhost:9500
           sleep 30
-          docker logs iin-agent-Org1MSP-network1
-          docker logs iin-agent-Org1MSP-network2
+          docker logs --tail 5 iin-agent-Org1MSP-network1
+          docker logs --tail 5 iin-agent-Org1MSP-network2
           ./bin/fabric-cli configure membership --local-network=network2 --target-network=network1 --iin-agent-endpoint=localhost:9501
           sleep 30
-          docker logs iin-agent-Org1MSP-network1
-          docker logs iin-agent-Org1MSP-network2
+          docker logs --tail 5 iin-agent-Org1MSP-network1
+          docker logs --tail 5 iin-agent-Org1MSP-network2
         working-directory: weaver/samples/fabric/fabric-cli
 
       # CORDA CLIENT
@@ -633,11 +679,11 @@ jobs:
           # CORDA2-CORDA
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients request-state --wkey=C localhost:9082 relay-corda:9081/Corda_Network/corda_partya_1:10003#com.cordaSimpleApplication.flow.GetStateByKey:C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients get-state C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           # CORDA - FABRIC1
@@ -729,11 +775,11 @@ jobs:
           cp chaincode.json.template chaincode.json
           sed -i "s/\"args\"\: \[\"a\"/\"args\"\: \[\"C\"/g" chaincode.json
           ./bin/fabric-cli interop --local-network=network2 --sign=true --requesting-org=Org1MSP relay-corda:9081/Corda_Network/corda_partya_1:10003#com.cordaSimpleApplication.flow.GetStateByKey:C --debug=true &> tmp.out
-          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           ./bin/fabric-cli chaincode query mychannel simplestate read '["C"]' --local-network=network2 &> tmp.out
-          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
 
@@ -747,60 +793,78 @@ jobs:
           fi
         working-directory: weaver/samples/fabric/fabric-cli
 
-      - name: DEBUG Logs - corda partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda partya
         run: docker logs corda_partya_1
 
-      - name: DEBUG Logs - corda network2 partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda network2 partya
         run: docker logs corda_network2_partya_1
 
-      - name: DEBUG Logs - fabric n1 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 relay
         run: docker logs relay-network1
 
-      - name: DEBUG Logs - fabric n2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 relay
         run: docker logs relay-network2
 
-      - name: DEBUG Logs - corda relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda relay
         run: docker logs relay-corda
 
-      - name: DEBUG Logs - corda2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 relay
         run: docker logs relay-corda2
 
-      - name: DEBUG Logs - fabric n1 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 driver
         run: docker logs driver-fabric-network1
 
-      - name: DEBUG Logs - fabric n2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 driver
         run: docker logs driver-fabric-network2
 
-      - name: DEBUG Logs - corda driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda driver
         run: docker logs driver-corda-Corda_Network
 
-      - name: DEBUG Logs - corda2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 driver
         run: docker logs driver-corda-Corda_Network2
 
+      - if: failure()
+        name: DEBUG Logs - iin agent n1 org1
+        run: docker logs iin-agent-Org1MSP-network1
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n2 org1
+        run: docker logs iin-agent-Org1MSP-network2
+
   data-sharing-local:
+    needs: check_code_changed
+    if:  inputs.run_all == 'true' || needs.check_code_changed.outputs.status == 'true'
     # if: ${{ false }}
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
-      - name: Set up JDK 8
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            weaver_code_changed:
+              - './weaver/**'
+              - '.github/workflows/test_weaver-data-sharing.yaml'
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v3.11.0
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Go
@@ -809,7 +873,7 @@ jobs:
           go-version: '1.20.2'
 
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
 
@@ -832,7 +896,7 @@ jobs:
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.6/protoc-3.15.6-linux-x86_64.zip
           unzip protoc-3.15.6-linux-x86_64.zip -d protoc
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
 
       # PROTOS
       - name: Build GO Protos
@@ -891,9 +955,7 @@ jobs:
 
       # CORDA NETWORK
       - name: Start Corda Network
-        run: |
-          sed -i "/docker logs corda_partya_1 -f/"' s/^/#/' "scripts/start-nodes.sh"
-          make start-local &> corda-net.out &
+        run: make start-local &> corda-net.out &
         working-directory: weaver/tests/network-setups/corda
 
       # FABRIC NETWORK
@@ -1015,10 +1077,10 @@ jobs:
         run: |
           ./bin/fabric-cli configure membership --local-network=network1 --target-network=network2 --iin-agent-endpoint=localhost:9500
           sleep 10
-          tail -10 ../../../core/identity-management/iin-agent/iinagent-n1.out
+          tail -5 ../../../core/identity-management/iin-agent/iinagent-n1.out
           ./bin/fabric-cli configure membership --local-network=network2 --target-network=network1 --iin-agent-endpoint=localhost:9501
           sleep 10
-          tail -10 ../../../core/identity-management/iin-agent/iinagent-n2.out
+          tail -5 ../../../core/identity-management/iin-agent/iinagent-n2.out
         working-directory: weaver/samples/fabric/fabric-cli
 
       # CORDA CLIENT
@@ -1043,11 +1105,11 @@ jobs:
           # CORDA2-CORDA
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients request-state --wkey=C localhost:9082 localhost:9081/Corda_Network/localhost:10006#com.cordaSimpleApplication.flow.GetStateByKey:C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           NETWORK_NAME=Corda_Network2 CORDA_PORT=30006 ./clients/build/install/clients/bin/clients get-state C 1> tmp.out
-          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          cat tmp.out | grep "SimpleState(key=C, value=\[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           # CORDA - FABRIC1
@@ -1139,11 +1201,11 @@ jobs:
           cp chaincode.json.template chaincode.json
           sed -i "s/\"args\"\: \[\"a\"/\"args\"\: \[\"C\"/g" chaincode.json
           ./bin/fabric-cli interop --local-network=network2 --sign=true --requesting-org=Org1MSP localhost:9081/Corda_Network/localhost:10006#com.cordaSimpleApplication.flow.GetStateByKey:C --debug=true --debug=true &> tmp.out
-          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Args: C, \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
           ./bin/fabric-cli chaincode query mychannel simplestate read '["C"]' --local-network=network2 &> tmp.out
-          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=20" && COUNT=$(( COUNT + 1 )) && echo "PASS"
+          tail -n 1 tmp.out | grep "Result from network query: \[SimpleState(key=C, value=6" && COUNT=$(( COUNT + 1 )) && echo "PASS"
           cat tmp.out
 
 
@@ -1157,42 +1219,50 @@ jobs:
           fi
         working-directory: weaver/samples/fabric/fabric-cli
 
-      - name: DEBUG Logs - corda partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda partya
         run: docker logs corda_partya_1
 
-      - name: DEBUG Logs - corda network2 partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda network2 partya
         run: docker logs corda_network2_partya_1
 
-      - name: DEBUG Logs - fabric n1 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 relay
         run: cat weaver/core/relay/relay-n1.out
 
-      - name: DEBUG Logs - fabric n2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 relay
         run: cat weaver/core/relay/relay-n2.out
 
-      - name: DEBUG Logs - corda relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda relay
         run: cat weaver/core/relay/relay-corda.out
 
-      - name: DEBUG Logs - corda2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 relay
         run: cat weaver/core/relay/relay-corda2.out
 
-      - name: DEBUG Logs - fabric n1 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 driver
         run: cat weaver/core/drivers/fabric-driver/fdriver-n1.out
 
-      - name: DEBUG Logs - fabric n2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 driver
         run: cat weaver/core/drivers/fabric-driver/fdriver-n2.out
 
-      - name: DEBUG Logs - corda driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda driver
         run: cat weaver/core/drivers/corda-driver/corda-driver.out
 
-      - name: DEBUG Logs - corda2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 driver
         run: cat weaver/core/drivers/corda-driver/corda2-driver.out
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n1 org1
+        run: cat weaver/core/identity-management/iin-agent/iinagent-n1.out
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n2 org1
+        run: cat weaver/core/identity-management/iin-agent/iinagent-n2.out

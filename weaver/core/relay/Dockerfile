@@ -1,4 +1,4 @@
-FROM rust:1.62.1-slim-bullseye AS builder
+FROM rust:1.69.0-slim-bullseye AS builder
 
 RUN apt-get update
 
@@ -14,19 +14,19 @@ RUN rustup target add x86_64-unknown-linux-musl
 # on linux (debian), we can use the toolchain mentioned below also because
 # custom toolchains are not supported.
 # 
-RUN rustup component add rustfmt --toolchain 1.62.1-x86_64-unknown-linux-gnu
+RUN rustup component add rustfmt --toolchain 1.69.0-x86_64-unknown-linux-gnu
 RUN mkdir -p /opt/relay
 COPY . /opt/relay
 
 # Build OpenSSL
 
-ENV SSL_VERSION=1.1.1f
-    
+ENV SSL_VERSION=3.0.14
+    # https://www.openssl.org/source/openssl-1.1.1w.tar.gz
 RUN ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm && \
     ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic && \
     ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
 RUN mkdir /musl && \
-    curl https://www.openssl.org/source/openssl-$SSL_VERSION.tar.gz -O && \
+    curl https://www.openssl.org/source/openssl-$SSL_VERSION.tar.gz -LO && \
     tar zxvf openssl-$SSL_VERSION.tar.gz && \
     cd openssl-$SSL_VERSION/ && \
     CC="musl-gcc -fPIE -pie" ./Configure no-shared no-async --prefix=/musl --openssldir=/musl/ssl linux-x86_64 && \

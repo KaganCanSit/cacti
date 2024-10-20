@@ -11,10 +11,11 @@ import Web3, {
   TransactionReceiptBase,
   WebSocketProvider,
 } from "web3";
-import { NewHeadsSubscription } from "web3-eth";
 import { PayableMethodObject } from "web3-eth-contract";
 
 import OAS from "../json/openapi.json";
+
+import { Interface, FunctionFragment, isAddress } from "ethers";
 
 import {
   ConsensusAlgorithmFamily,
@@ -63,7 +64,10 @@ import {
 
 import { RunTransactionEndpoint } from "./web-services/run-transaction-v1-endpoint";
 import { InvokeContractEndpoint } from "./web-services/invoke-contract-v1-endpoint";
-import { WatchBlocksV1Endpoint } from "./web-services/watch-blocks-v1-endpoint";
+import {
+  createWatchBlocksV1Endpoint,
+  WatchBlocksV1Endpoint,
+} from "./web-services/watch-blocks-v1-endpoint";
 import { GetPrometheusExporterMetricsEndpointV1 } from "./web-services/get-prometheus-exporter-metrics-v1-endpoint";
 import { InvokeRawWeb3EthMethodEndpoint } from "./web-services/invoke-raw-web3eth-method-v1-endpoint";
 import { InvokeRawWeb3EthContractEndpoint } from "./web-services/invoke-raw-web3eth-contract-v1-endpoint";
@@ -140,11 +144,10 @@ export class PluginLedgerConnectorEthereum
   public prometheusExporter: PrometheusExporter;
   private readonly instanceId: string;
   private readonly log: Logger;
-  private readonly web3: Web3;
-  private readonly web3WatchBlock?: Web3;
+  private readonly web3: InstanceType<typeof Web3>;
   private endpoints: IWebServiceEndpoint[] | undefined;
   public static readonly CLASS_NAME = "PluginLedgerConnectorEthereum";
-  private watchBlocksSubscriptions: Map<string, NewHeadsSubscription> =
+  private watchBlocksSubscriptions: Map<string, WatchBlocksV1Endpoint> =
     new Map();
 
   public get className(): string {
@@ -196,9 +199,6 @@ export class PluginLedgerConnectorEthereum
     const label = this.className;
     this.log = LoggerProvider.getOrCreate({ level, label });
     this.web3 = new Web3(this.createWeb3Provider());
-    if (this.options.rpcApiWsHost) {
-      this.web3WatchBlock = new Web3(this.createWeb3WsProvider());
-    }
 
     this.instanceId = options.instanceId;
     this.pluginRegistry = options.pluginRegistry as PluginRegistry;
@@ -292,10 +292,7 @@ export class PluginLedgerConnectorEthereum
     }
 
     await this.closeWeb3jsConnection(
-      this.web3.currentProvider as WebSocketProvider,
-    );
-    await this.closeWeb3jsConnection(
-      this.web3WatchBlock?.currentProvider as WebSocketProvider,
+      this.web3.currentProvider as unknown as WebSocketProvider,
     );
   }
 
@@ -311,35 +308,31 @@ export class PluginLedgerConnectorEthereum
     const webServices = await this.getOrCreateWebServices();
     await Promise.all(webServices.map((ws) => ws.registerExpress(app)));
 
-    if (this.web3WatchBlock) {
-      this.log.debug(`WebSocketProvider created for socketio endpoints`);
-      wsApi.on("connection", (socket: SocketIoSocket) => {
-        this.log.info(`New Socket connected. ID=${socket.id}`);
+    wsApi.on("connection", (socket: SocketIoSocket) => {
+      this.log.info(`New socket connection id ${socket.id}`);
 
-        socket.on(WatchBlocksV1.Subscribe, (options?: WatchBlocksV1Options) => {
-          new WatchBlocksV1Endpoint({
-            web3: this.web3WatchBlock as typeof this.web3WatchBlock,
-            socket,
-            logLevel,
-            options,
-          }).subscribe();
-        });
-      });
-    } else {
-      this.log.info(
-        `WebSocketProvider was NOT created for socketio endpoints! Socket.IO will not be handled!`,
+      // WatchBlocksV1Endpoint
+      socket.on(
+        WatchBlocksV1.Subscribe,
+        async (options?: WatchBlocksV1Options) => {
+          try {
+            const endpoint = createWatchBlocksV1Endpoint({
+              web3: this.web3,
+              socket,
+              logLevel,
+              options,
+            });
+            this.watchBlocksSubscriptions.set(
+              socket.id,
+              await endpoint.subscribe(),
+            );
+            this.log.debug(`${endpoint.className} created for ${socket.id}`);
+          } catch (error) {
+            this.log.error("Error when creating WatchBlocksV1Endpoint:", error);
+          }
+        },
       );
-      wsApi.on("connection", (socket: SocketIoSocket) => {
-        this.log.info(
-          "Socket connected but no async endpoint is supported - disconnecting...",
-        );
-        socket.emit(
-          WatchBlocksV1.Error,
-          "Missing rpcApiWsHost - can't listen for new blocks on HTTP provider",
-        );
-        socket.disconnect();
-      });
-    }
+    });
 
     // Register JSON-RPC proxy to pass requests directly to ethereum node
     if (this.options.rpcApiHttpHost) {
@@ -355,7 +348,7 @@ export class PluginLedgerConnectorEthereum
             [".*"]: "",
           },
           onProxyReq: fixRequestBody,
-          logLevel: "error",
+          logLevel: "warn",
         }),
       );
       this.log.info(`Registered proxy from ${proxyUrl} to ${targetUrl}`);
@@ -1134,6 +1127,53 @@ export class PluginLedgerConnectorEthereum
       throw new RuntimeError(
         `Invalid method name provided in request. ${args.contractMethod} does not exist on the Web3 contract object's "methods" property.`,
       );
+    }
+    const abiInterface = new Interface(args.abi);
+    const methodFragment: FunctionFragment | null = abiInterface.getFunction(
+      args.contractMethod,
+    );
+    if (!methodFragment) {
+      throw new RuntimeError(
+        `Method ${args.contractMethod} not found in ABI interface.`,
+      );
+    }
+
+    // validation for the contractMethod
+    if (methodFragment.inputs.length !== contractMethodArgs.length) {
+      throw new Error(
+        `Incorrect number of arguments for ${args.contractMethod}`,
+      );
+    }
+    methodFragment.inputs.forEach((input, index) => {
+      const argValue = contractMethodArgs[index];
+      const isValidType = typeof argValue === input.type;
+
+      if (!isValidType) {
+        throw new Error(
+          `Invalid type for argument ${index + 1} in ${args.contractMethod}`,
+        );
+      }
+    });
+
+    //validation for the invocationParams
+    const invocationParams = args.invocationParams as Record<string, any>;
+    const allowedKeys = ["from", "gasLimit", "gasPrice", "value"];
+
+    if (invocationParams) {
+      Object.keys(invocationParams).forEach((key) => {
+        if (!allowedKeys.includes(key)) {
+          throw new Error(`Invalid key '${key}' in invocationParams`);
+        }
+        if (key === "from" && !isAddress(invocationParams[key])) {
+          throw new Error(`Invalid type for 'from' in invocationParams`);
+        }
+        if (key === "gasLimit" && typeof invocationParams[key] !== "number") {
+          throw new Error(`Invalid type for '${key}' in invocationParams`);
+        }
+        if (key === "gasPrice" && typeof invocationParams[key] !== "number") {
+          throw new Error(`Invalid type for '${key}'in invocationParams`);
+        }
+      });
     }
 
     const methodRef = contract.methods[args.contractMethod] as (

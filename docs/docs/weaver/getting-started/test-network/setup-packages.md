@@ -27,8 +27,8 @@ Before starting, make sure you have the following software installed on your hos
 - Curl: _install using package manager, like `apt` on Debian/Ubuntu Linux_
 - Git: [sample instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Docker: [sample instructions](https://docs.docker.com/engine/install/) (Latest version)
-- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher, but lower than version V2)
-- Golang: [sample instructions](https://golang.org/dl/) (Version 1.16 or higher)
+- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 2 or higher)
+- Golang: [sample instructions](https://golang.org/dl/) (Version 1.20 or higher)
 - Java (JDK and JRE): [sample instructions](https://openjdk.java.net/install/) (Version 8)
 - Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 16 Supported)
 - Yarn: [sample instructions](https://classic.yarnpkg.com/en/docs/install/)
@@ -98,7 +98,7 @@ Follow the instructions below to build and launch the networks:
 | If you do not wish to test Fabric-Fabric interoperation, you can choose to launch only one of the two networks along with its interoperation chaincode. For `network1`, run `make start-interop-network1`, and for `network2`, run `make start-interop-network2` |
 | If you wish to enable end-to-end confidentiality by default in the interoperation modules that are deployed during network launch, set the environment variable `E2E_CONFIDENTIALITY` to `true` in the command line as follows: `E2E_CONFIDENTIALITY=true make start-interop` |
 
-For more information, refer to the associated [README](https://github.com/hyperledger/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
+For more information, refer to the associated [README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
 
 **Troubleshooting Tips**:
 
@@ -244,7 +244,7 @@ Run a relay for `network2` as follows (_do this only if you have launched both F
   RELAY_CONFIG=config/Fabric_Relay2.toml cargo run --bin server
   ```
 
-For more information, see the [relay README](https://github.com/hyperledger/cacti/tree/main/weaver/core/relay).
+For more information, see the [relay README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/core/relay).
 
 
 ### Fabric Driver
@@ -694,7 +694,7 @@ Run a Corda driver as follows:
 - Navigate to the `weaver/core/drivers/corda-driver` folder.
 - Run the following to start Corda driver for `Corda_Network`:
   ```bash
-  ./build/install/corda-driver/bin/corda-driver
+  ./build/install/driver-corda/bin/driver-corda
   ```
   If the driver starts successfully, it should log the following message on your terminal:
   ```
@@ -702,7 +702,7 @@ Run a Corda driver as follows:
   ```
 - Run the following to start Corda driver for `Corda_Network2`:
   ```bash
-  DRIVER_PORT=9098 ./build/install/corda-driver/bin/corda-driver
+  DRIVER_PORT=9098 ./build/install/driver-corda/bin/driver-corda
   ```
   If the driver starts successfully, it should log the following message on your terminal:
   ```

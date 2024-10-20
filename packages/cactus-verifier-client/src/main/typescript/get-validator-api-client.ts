@@ -6,17 +6,9 @@
  */
 
 import type {
-  SocketIOApiClient,
-  SocketIOApiClientOptions,
-} from "@hyperledger/cactus-api-client";
-import type {
   BesuApiClient,
   BesuApiClientOptions,
 } from "@hyperledger/cactus-plugin-ledger-connector-besu";
-import type {
-  QuorumApiClient,
-  QuorumApiClientOptions,
-} from "@hyperledger/cactus-plugin-ledger-connector-quorum";
 import type {
   EthereumApiClient,
   EthereumApiClientOptions,
@@ -25,10 +17,6 @@ import type {
   CordaApiClient,
   CordaApiClientOptions,
 } from "@hyperledger/cactus-plugin-ledger-connector-corda";
-import type {
-  IrohaApiClient,
-  IrohaApiClientOptions,
-} from "@hyperledger/cactus-plugin-ledger-connector-iroha";
 import type {
   Iroha2ApiClient,
   Iroha2ApiClientOptions,
@@ -49,10 +37,6 @@ import type {
  * @warning Remember to keep this list updated to have new ApiClients visible in VerifierFactory interface.
  */
 export type ClientApiConfig = {
-  "legacy-socketio": {
-    in: SocketIOApiClientOptions;
-    out: SocketIOApiClient;
-  };
   BESU_1X: {
     in: BesuApiClientOptions;
     out: BesuApiClient;
@@ -61,10 +45,6 @@ export type ClientApiConfig = {
     in: BesuApiClientOptions;
     out: BesuApiClient;
   };
-  QUORUM_2X: {
-    in: QuorumApiClientOptions;
-    out: QuorumApiClient;
-  };
   ETH_1X: {
     in: EthereumApiClientOptions;
     out: EthereumApiClient;
@@ -72,10 +52,6 @@ export type ClientApiConfig = {
   CORDA_4X: {
     in: CordaApiClientOptions;
     out: CordaApiClient;
-  };
-  IROHA_1X: {
-    in: IrohaApiClientOptions;
-    out: IrohaApiClient;
   };
   IROHA_2X: {
     in: Iroha2ApiClientOptions;
@@ -103,21 +79,11 @@ export async function getValidatorApiClient<K extends keyof ClientApiConfig>(
   options: ClientApiConfig[K]["in"],
 ): Promise<ClientApiConfig[K]["out"]> {
   switch (validatorType) {
-    case "legacy-socketio":
-      // TODO - replace with dynamic imports once ESM is supported
-      const apiClientPackage = require("@hyperledger/cactus-api-client");
-      return new apiClientPackage.SocketIOApiClient(
-        options as SocketIOApiClientOptions,
-      );
     case "BESU_1X":
     case "BESU_2X":
+      // TODO - replace with dynamic imports once ESM is supported
       const besuPackage = require("@hyperledger/cactus-plugin-ledger-connector-besu");
       return new besuPackage.BesuApiClient(options as BesuApiClientOptions);
-    case "QUORUM_2X":
-      const quorumPackage = require("@hyperledger/cactus-plugin-ledger-connector-quorum");
-      return new quorumPackage.QuorumApiClient(
-        options as QuorumApiClientOptions,
-      );
     case "ETH_1X":
       const ethereumPackage = require("@hyperledger/cactus-plugin-ledger-connector-ethereum");
       return new ethereumPackage.EthereumApiClient(
@@ -126,9 +92,6 @@ export async function getValidatorApiClient<K extends keyof ClientApiConfig>(
     case "CORDA_4X":
       const cordaPackage = require("@hyperledger/cactus-plugin-ledger-connector-corda");
       return new cordaPackage.CordaApiClient(options as CordaApiClientOptions);
-    case "IROHA_1X":
-      const irohaPackage = require("@hyperledger/cactus-plugin-ledger-connector-iroha");
-      return new irohaPackage.IrohaApiClient(options as IrohaApiClientOptions);
     case "IROHA_2X":
       const iroha2Package = require("@hyperledger/cactus-plugin-ledger-connector-iroha2");
       return new iroha2Package.Iroha2ApiClient(

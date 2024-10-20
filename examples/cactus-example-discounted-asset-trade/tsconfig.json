@@ -18,19 +18,19 @@
       "path": "../../packages/cactus-core-api/tsconfig.json"
     },
     {
-      "path": "../../packages/cactus-cmd-socketio-server/tsconfig.json"
+      "path": "../cactus-common-example-server/tsconfig.json"
     },
     {
       "path": "../../packages/cactus-plugin-keychain-memory/tsconfig.json"
+    },
+    {
+      "path": "../../packages/cactus-plugin-ledger-connector-aries/tsconfig.json"
     },
     {
       "path": "../../packages/cactus-plugin-ledger-connector-fabric/tsconfig.json"
     },
     {
       "path": "../../packages/cactus-plugin-ledger-connector-ethereum/tsconfig.json"
-    },
-    {
-      "path": "../../packages/cactus-verifier-client/tsconfig.json"
     }
   ]
 }

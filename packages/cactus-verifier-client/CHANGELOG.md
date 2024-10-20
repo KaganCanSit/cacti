@@ -3,6 +3,42 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.0.0](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.7...v2.0.0) (2024-10-15)
+
+**Note:** Version bump only for package @hyperledger/cactus-verifier-client
+
+# [2.0.0-rc.6](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.5...v2.0.0-rc.6) (2024-09-30)
+
+**Note:** Version bump only for package @hyperledger/cactus-verifier-client
+
+# [2.0.0-rc.5](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.4...v2.0.0-rc.5) (2024-09-30)
+
+### Features
+
+* **cmd-socketio-server:** move to examples as deprecated ([4de8069](https://github.com/hyperledger/cactus/commit/4de806974f0066359cca422561042a55173d3655))
+
+# [2.0.0-rc.4](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.3...v2.0.0-rc.4) (2024-09-08)
+
+### Features
+
+* **go-ethereum-socketio:** remove deprecated connector ([56dd9f8](https://github.com/hyperledger/cactus/commit/56dd9f8aa72883aeb5bfcf0303b0af6e84daad7a)), closes [#3155](https://github.com/hyperledger/cactus/issues/3155)
+
+# [2.0.0-rc.3](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.2...v2.0.0-rc.3) (2024-07-21)
+
+**Note:** Version bump only for package @hyperledger/cactus-verifier-client
+
+# [2.0.0-rc.2](https://github.com/hyperledger/cactus/compare/v2.0.0-rc.1...v2.0.0-rc.2) (2024-07-03)
+
+**Note:** Version bump only for package @hyperledger/cactus-verifier-client
+
+# [2.0.0-rc.1](https://github.com/hyperledger/cactus/compare/v2.0.0-alpha.2...v2.0.0-rc.1) (2024-06-14)
+
+### Features
+
+* **cactus-plugin-ledger-connector-fabric-socketio:** remove fabric-socketio connector ([704e201](https://github.com/hyperledger/cactus/commit/704e201d6bd6bf7a38f0de7da60723118e18cea7)), closes [#2644](https://github.com/hyperledger/cactus/issues/2644)
+* **cactus-plugin-ledger-connector-iroha:** remove deprecated iroha connector ([fa27fde](https://github.com/hyperledger/cactus/commit/fa27fde9a28f83ff29964693be656dc107046517)), closes [#3159](https://github.com/hyperledger/cactus/issues/3159) [#3155](https://github.com/hyperledger/cactus/issues/3155)
+* **cactus-plugin-ledger-connector-sawtooth:** add new connector plugin ([e379504](https://github.com/hyperledger/cactus/commit/e37950403636a3fbc378fc7462b886294e6c7923))
+
 # [2.0.0-alpha.2](https://github.com/hyperledger/cactus/compare/v2.0.0-alpha.1...v2.0.0-alpha.2) (2023-09-27)
 
 ### Bug Fixes

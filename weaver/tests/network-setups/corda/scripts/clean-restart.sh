@@ -1,10 +1,10 @@
+#!/bin/bash
+
 # Copyright IBM Corp. All Rights Reserved.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#!/bin/bash
-
-docker-compose down
+docker compose down
 
 ./gradlew clean
 

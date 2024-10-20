@@ -1,7 +1,7 @@
 FROM docker:24.0.5-dind
 
-ARG FABRIC_VERSION=2.4.4
-ARG FABRIC_NODEENV_VERSION=2.4.2
+ARG FABRIC_VERSION=2.5.6
+ARG FABRIC_NODEENV_VERSION=2.5.4
 ARG CA_VERSION=1.5.3
 ARG COUCH_VERSION_FABRIC=0.4
 ARG COUCH_VERSION=3.2.2
@@ -19,7 +19,7 @@ RUN apk add --no-cache git
 # Fabric Samples needs bash, sh is not good enough here
 RUN apk add --no-cache bash
 
-# Need curl to download the Fabric bootstrap script
+# Need curl to download the Fabric installation script
 RUN apk add --no-cache curl
 
 # The file binary is used to inspect exectubles when debugging container image issues
@@ -32,13 +32,13 @@ RUN apk add --no-cache npm nodejs
 RUN apk add --no-cache yq
 
 # Download and setup path variables for Go
-RUN wget https://golang.org/dl/go1.20.6.linux-amd64.tar.gz
-RUN tar -xvf go1.20.6.linux-amd64.tar.gz
+RUN wget https://golang.org/dl/go1.22.4.linux-amd64.tar.gz
+RUN tar -xvf go1.22.4.linux-amd64.tar.gz
 RUN mv go /usr/local
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/usr/local/go
 ENV PATH=$PATH:$GOPATH/bin
-RUN rm go1.20.6.linux-amd64.tar.gz
+RUN rm go1.22.4.linux-amd64.tar.gz
 
 # Needed as of as of go v1.20
 # @see https://github.com/golang/go/issues/59305#issuecomment-1488478737
@@ -158,24 +158,29 @@ RUN /download-frozen-image-v2.sh /etc/hyperledger/fabric/fabric-ca/ hyperledger/
 RUN /download-frozen-image-v2.sh /etc/hyperledger/fabric/fabric-couchdb/ hyperledger/fabric-couchdb:${COUCH_VERSION_FABRIC}
 RUN /download-frozen-image-v2.sh /etc/couchdb/ couchdb:${COUCH_VERSION}
 
-# Download and execute the Fabric bootstrap script, but instruct it with the -d
+# Download and execute the Fabric installation script, but instruct it with the -d
 # flag to avoid pulling docker images because during the build phase of this image
 # there is no docker daemon running yet
-RUN curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/54e27a66812845985c5c067d7f5244a05c6e719b/scripts/bootstrap.sh > /bootstrap.sh
-RUN chmod +x bootstrap.sh
-# Run the bootstrap here so that at least we can pre-fetch the git clone and the binary downloads resulting in
-# faster container startup speed since these steps will not have to be done, only the docker image pulls.
-RUN /bootstrap.sh ${FABRIC_VERSION} ${CA_VERSION} -d
+RUN curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh > /install-fabric.sh
+RUN chmod +x install-fabric.sh
+RUN /install-fabric.sh --fabric-version ${FABRIC_VERSION} --ca-version ${CA_VERSION} binary samples
 
 # Update the image version used by the Fabric peers when installing chaincodes.
 # This is necessary because the older (default) image uses NodeJS v12 and npm v6
 # But we need at least NodeJS 16 and npm v7 for the dependency installation to work.
 RUN sed -i "s/fabric-nodeenv:\$(TWO_DIGIT_VERSION)/fabric-nodeenv:${FABRIC_NODEENV_VERSION}/g" /fabric-samples/test-network/compose/docker/peercfg/core.yaml
 
+RUN yq '.chaincode.logging.level = "debug"' \
+    --inplace /fabric-samples/test-network/compose/docker/peercfg/core.yaml
+
 # Set the log level of the peers and other containers to DEBUG instead of the default INFO
 RUN sed -i "s/FABRIC_LOGGING_SPEC=INFO/FABRIC_LOGGING_SPEC=DEBUG/g" /fabric-samples/test-network/compose/docker/docker-compose-test-net.yaml
 
-# Update the docker-compose file of the fabric-samples repo so that the 
+# For now this cannot be used because it mangles the outupt of the "peer lifecycle chaincode queryinstalled" commands.
+# We need to refactor those commands in the deployment endpoints so that they are immune to this logging setting.
+# RUN sed -i "s/FABRIC_LOGGING_SPEC=INFO/FABRIC_LOGGING_SPEC=DEBUG/g" /fabric-samples/test-network/compose/compose-test-net.yaml
+
+# Update the docker-compose file of the fabric-samples repo so that the
 # core.yaml configuration file of the peer containers can be customized.
 # We need the above because we need to override the NodeJS version the peers are
 # using when building the chaincodes in the tests. This is necessary because the
@@ -190,6 +195,7 @@ RUN yq '.services."peer0.org2.example.com".volumes += "../..:/opt/gopath/src/git
     --inplace /fabric-samples/test-network/compose/docker/docker-compose-test-net.yaml
 RUN yq '.services."peer0.org2.example.com".volumes += "../../config/core.yaml:/etc/hyperledger/fabric/core.yaml"' \
     --inplace /fabric-samples/test-network/compose/docker/docker-compose-test-net.yaml
+
 
 # Install supervisord because we need to run the docker daemon and also the fabric network
 # meaning that we have multiple processes to run.

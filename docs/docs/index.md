@@ -16,7 +16,6 @@ Cacti is built on a modular architecture and supports extensions through the plu
 * Hyperledger Sawtooth
 * R3 Corda
 * Go-Ethereum
-* Quorum
 * Xdai
 
 Client libraries and examples are provided in the following languages: JavaScript/TypeScript, Golang, Java/Kotlin, Solidity.
@@ -25,10 +24,11 @@ Client libraries and examples are provided in the following languages: JavaScrip
 
 * [Vision](./vision.md)
 * [Architecture](./architecture.md)
-* [Cactus whitepaper](https://github.com/hyperledger/cacti/blob/main/whitepaper/whitepaper.md)
-* [Weaver RFCs](https://github.com/hyperledger/cacti/tree/main/weaver/rfcs)
+* [Cactus whitepaper](https://github.com/hyperledger-cacti/cacti/blob/main/whitepaper/whitepaper.md)
+* [Weaver RFCs](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/rfcs)
 * [Running pipelines with Cactus packages](./cactus/)
 * [Running pipelines with Weaver packages](./weaver/)
+* [Open API Specifications](./references/openapi/index.md)
 
 !!! note
 

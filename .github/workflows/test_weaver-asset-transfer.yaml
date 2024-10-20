@@ -12,34 +12,48 @@ env:
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      run_all:
+        required: true
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: asset-transfer-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  check_code_changed:
+    outputs:
+      status: ${{ steps.changes.outputs.weaver_code_changed }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            weaver_code_changed:
+              - './weaver/**'
+              - '.github/workflows/test_weaver-asset-transfer.yaml'
+
   asset-transfer:
-    if: ${{ false }}
+    needs: check_code_changed
+    if: ${{ false && needs.check_code_changed.outputs.status == 'true' }}
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
-      - name: Set up JDK 8
+      - name: Set up JDK 17
         uses: actions/setup-java@v3.11.0
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Go
@@ -48,7 +62,7 @@ jobs:
           go-version: '1.20.2'
 
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
 
@@ -71,9 +85,7 @@ jobs:
         working-directory: weaver/tests/network-setups/corda
 
       - name: Start Corda Network
-        run: |
-          sed -i "/docker logs corda_partya_1 -f/"' s/^/#/' "scripts/start-nodes.sh"
-          make start &> corda-net.out &
+        run: make start &> corda-net.out &
         working-directory: weaver/tests/network-setups/corda
 
       # FABRIC NETWORK
@@ -169,6 +181,7 @@ jobs:
           sed -i "s/<personal-access-token>/${{ secrets.GITHUB_TOKEN }}/g" .npmrc
           cat .npmrc
         working-directory: weaver/samples/fabric/fabric-cli
+
       - name: Build Fabric CLI
         run: |
           npm install --global yarn
@@ -620,60 +633,70 @@ jobs:
 
         working-directory: weaver/samples/fabric/fabric-cli
 
-      - name: DEBUG Logs - corda partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda partya
         run: docker logs corda_partya_1
 
-      - name: DEBUG Logs - corda network2 partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda network2 partya
         run: docker logs corda_network2_partya_1
 
-      - name: DEBUG Logs - fabric n1 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 relay
         run: docker logs relay-network1
 
-      - name: DEBUG Logs - fabric n2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 relay
         run: docker logs relay-network2
 
-      - name: DEBUG Logs - corda relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda relay
         run: docker logs relay-corda
 
-      - name: DEBUG Logs - corda2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 relay
         run: docker logs relay-corda2
 
-      - name: DEBUG Logs - fabric n1 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 driver
         run: docker logs driver-fabric-network1
 
-      - name: DEBUG Logs - fabric n2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 driver
         run: docker logs driver-fabric-network2
 
-      - name: DEBUG Logs - corda driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda driver
         run: docker logs driver-corda-Corda_Network
 
-      - name: DEBUG Logs - corda2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 driver
         run: docker logs driver-corda-Corda_Network2
 
+      - if: failure()
+        name: DEBUG Logs - iin agent n1 org1
+        run: docker logs iin-agent-Org1MSP-network1
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n2 org1
+        run: docker logs iin-agent-Org1MSP-network2
+
   asset-transfer-local:
+    needs: check_code_changed
+    if:  inputs.run_all == 'true' || needs.check_code_changed.outputs.status == 'true'
     # if: ${{ false }}
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
-      - name: Set up JDK 8
+      - name: Set up JDK 17
         uses: actions/setup-java@v3.11.0
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Set up Go
@@ -682,7 +705,7 @@ jobs:
           go-version: '1.20.2'
 
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
 
@@ -705,7 +728,7 @@ jobs:
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.15.6/protoc-3.15.6-linux-x86_64.zip
           unzip protoc-3.15.6-linux-x86_64.zip -d protoc
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
 
       # PROTOS
       - name: Build GO Protos
@@ -764,9 +787,7 @@ jobs:
 
       # CORDA NETWORK
       - name: Start Corda Network
-        run: |
-          sed -i "/docker logs corda_partya_1 -f/"' s/^/#/' "scripts/start-nodes.sh"
-          make start-local &> corda-net.out &
+        run: make start-local &> corda-net.out &
         working-directory: weaver/tests/network-setups/corda
 
       # FABRIC NETWORK
@@ -1296,42 +1317,50 @@ jobs:
 
         working-directory: weaver/samples/fabric/fabric-cli
 
-      - name: DEBUG Logs - corda partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda partya
         run: docker logs corda_partya_1
 
-      - name: DEBUG Logs - corda network2 partya
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda network2 partya
         run: docker logs corda_network2_partya_1
 
-      - name: DEBUG Logs - fabric n1 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 relay
         run: cat weaver/core/relay/relay-n1.out
 
-      - name: DEBUG Logs - fabric n2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 relay
         run: cat weaver/core/relay/relay-n2.out
 
-      - name: DEBUG Logs - corda relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda relay
         run: cat weaver/core/relay/relay-corda.out
 
-      - name: DEBUG Logs - corda2 relay
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 relay
         run: cat weaver/core/relay/relay-corda2.out
 
-      - name: DEBUG Logs - fabric n1 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n1 driver
         run: cat weaver/core/drivers/fabric-driver/fdriver-n1.out
 
-      - name: DEBUG Logs - fabric n2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - fabric n2 driver
         run: cat weaver/core/drivers/fabric-driver/fdriver-n2.out
 
-      - name: DEBUG Logs - corda driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda driver
         run: cat weaver/core/drivers/corda-driver/corda-driver.out
 
-      - name: DEBUG Logs - corda2 driver
-        if: failure()
+      - if: failure()
+        name: DEBUG Logs - corda2 driver
         run: cat weaver/core/drivers/corda-driver/corda2-driver.out
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n1 org1
+        run: cat weaver/core/identity-management/iin-agent/iinagent-n1.out
+
+      - if: failure()
+        name: DEBUG Logs - iin agent n2 org1
+        run: cat weaver/core/identity-management/iin-agent/iinagent-n2.out

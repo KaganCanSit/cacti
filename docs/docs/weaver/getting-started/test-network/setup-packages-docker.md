@@ -27,8 +27,8 @@ Before starting, make sure you have the following software installed on your hos
 - Curl: _install using package manager, like `apt` on Debian/Ubuntu Linux_
 - Git: [sample instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Docker: [sample instructions](https://docs.docker.com/engine/install/) (Latest version)
-- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 1.28.2 or higher, but lower than version V2)
-- Golang: [sample instructions](https://golang.org/dl/) (Version 1.16 or higher)
+- Docker-Compose: [sample instructions](https://docs.docker.com/compose/install/) (Version 2 or higher)
+- Golang: [sample instructions](https://golang.org/dl/) (Version 1.20 or higher)
 - Java (JDK and JRE): [sample instructions](https://openjdk.java.net/install/) (Version 8)
 - Node.js and NPM: [sample instructions](https://nodejs.org/en/download/package-manager/) (Version 11 to Version 16 Supported)
 - Yarn: [sample instructions](https://classic.yarnpkg.com/en/docs/install/)
@@ -95,7 +95,7 @@ Follow the instructions below to build and launch the networks:
 | If you do not wish to test Fabric-Fabric interoperation, you can choose to launch only one of the two networks along with its interoperation chaincode. For `network1`, run `make start-interop-network1`, and for `network2`, run `make start-interop-network2` |
 | If you wish to enable end-to-end confidentiality by default in the interoperation modules that are deployed during network launch, set the environment variable `E2E_CONFIDENTIALITY` to `true` in the command line as follows: `E2E_CONFIDENTIALITY=true make start-interop` |
 
-For more information, refer to the associated [README](https://github.com/hyperledger/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
+For more information, refer to the associated [README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/tests/network-setups/fabric/dev).
 
 **Troubleshooting Tips**:
 
@@ -135,7 +135,7 @@ Navigate to the `weaver/core/relay` folder and run a relay as follows:
   make convert-compose-method1
   ```
 
-For more information, see the [relay-docker README](https://github.com/hyperledger/cacti/tree/main/weaver/core/relay/relay-docker.md).
+For more information, see the [relay-docker README](https://github.com/hyperledger-cacti/cacti/tree/main/weaver/core/relay/relay-docker.md).
 
 ### Fabric Driver
 
@@ -172,6 +172,7 @@ IIN Agent is a client of a member of a DLT network or security domain with speci
 #### Deployment
 
 Use the following steps to run Fabric IIN Agents in Docker containers:
+
 * The `.env.n1.org1` and `.env.n1.org1.tls` files in the `docker-testnet/envs` directory contain environment variables used by the iin-agent of `org1` of `network1` at startup and runtime. Edit either of these files (depending on whether you wish to start the relay with or without TLS) as follows:
     - Replace `<PATH-TO-WEAVER>` with the absolute path of the `weaver` folder within your Cacti repository clone.
     - If Fabric network was started with 1 org, and IIN Agents are to be started with TLS enabled, update the `DNS_CONFIG_PATH` variable as:
@@ -239,7 +240,7 @@ If you are using a Linux system, make sure that lib64 is installed.
 
 You can install `fabric-cli` as follows (for both the Node.js and Golang versions):
 
-- Navigate to the `weaver/samples/fabric/fabric-cli` folder (for the Node.js version) or the `weaver/samples/fabric/go-cli` folder.
+- Navigate to the `weaver/samples/fabric/fabric-cli` folder (for the Node.js version) or the `weaver/samples/fabric/go-cli` folder (for the Golang version).
 - Create `.npmrc` from template `.npmrc.template`, by replacing `<personal-access-token>` with yours created [above](#package-access-token)..
 - Run the following to install dependencies (for the Node.js version) or the executable (for the Golang version):
   ```bash

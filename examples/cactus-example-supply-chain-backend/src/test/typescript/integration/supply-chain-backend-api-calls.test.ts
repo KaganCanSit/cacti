@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from "uuid";
 import test, { Test } from "tape-promise/tape";
 import { LogLevelDesc } from "@hyperledger/cactus-common";
 import { pruneDockerAllIfGithubAction } from "@hyperledger/cactus-test-tooling";
@@ -8,12 +9,13 @@ import { ConfigService } from "@hyperledger/cactus-cmd-api-server";
 import * as publicApi from "../../../main/typescript/public-api";
 import { ISupplyChainAppOptions } from "../../../main/typescript/public-api";
 import { SupplyChainApp } from "../../../main/typescript/public-api";
+import { Shipment } from "@hyperledger/cactus-example-supply-chain-business-logic-plugin";
 
 const testCase =
   "can launch via CLI with generated API server .config.json file";
 const logLevel: LogLevelDesc = "TRACE";
 
-test.skip("BEFORE " + testCase, async (t: Test) => {
+test("BEFORE " + testCase, async (t: Test) => {
   const pruning = pruneDockerAllIfGithubAction({ logLevel });
   await t.doesNotReject(pruning, "Pruning did not throw OK");
   t.end();
@@ -21,7 +23,7 @@ test.skip("BEFORE " + testCase, async (t: Test) => {
 
 // FIXME: https://github.com/hyperledger/cactus/issues/1521
 // Skipping until test can be stabilized.
-test.skip("Supply chain backend API calls can be executed", async (t: Test) => {
+test("Supply chain backend API calls can be executed", async (t: Test) => {
   t.ok(publicApi, "Public API of the package imported OK");
 
   const configService = new ConfigService();
@@ -68,8 +70,8 @@ test.skip("Supply chain backend API calls can be executed", async (t: Test) => {
   });
 
   // Node A => Besu
-  // Node B => Quorum
-  // Node C => Fabric 1.4.x
+  // Node B => Xdai Besu
+  // Node C => Fabric v2.5.6
   const startResult = await app.start();
   const { apiServerA, apiServerB, apiServerC } = startResult;
   t.ok(apiServerA, "ApiServerA truthy OK");
@@ -87,7 +89,7 @@ test.skip("Supply chain backend API calls can be executed", async (t: Test) => {
   t.true(httpSrvApiB.listening, "httpSrvApiB.listening true OK");
   t.true(httpSrvApiC.listening, "httpSrvApiC.listening true OK");
 
-  const { besuApiClient, fabricApiClient, quorumApiClient } = startResult;
+  const { besuApiClient, fabricApiClient, xdaiApiClient } = startResult;
 
   const metricsResB = await besuApiClient.getPrometheusMetricsV1();
   t.ok(metricsResB, "besu metrics res truthy OK");
@@ -99,8 +101,8 @@ test.skip("Supply chain backend API calls can be executed", async (t: Test) => {
   t.true(metricsResF.status > 199, "metricsResF.status > 199 true OK");
   t.true(metricsResF.status < 300, "metricsResF.status < 300 true OK");
 
-  const metricsResQ = await quorumApiClient.getPrometheusMetricsV1();
-  t.ok(metricsResQ, "quorum metrics res truthy OK");
+  const metricsResQ = await xdaiApiClient.getPrometheusMetricsV1();
+  t.ok(metricsResQ, "xdai besu metrics res truthy OK");
   t.true(metricsResQ.status > 199, "metricsResQ.status > 199 true OK");
   t.true(metricsResQ.status < 300, "metricsResQ.status < 300 true OK");
 
@@ -143,6 +145,39 @@ test.skip("Supply chain backend API calls can be executed", async (t: Test) => {
     listShipmentRes.status < 300,
     "listShipmentRes status < 300 truthy OK",
   );
+
+  const shipment: Shipment = {
+    bookshelfId: "some-id-of-a-bookshelf-" + uuidV4(),
+    id: "some-id-of-a-shipment-" + uuidV4(),
+  };
+
+  const insertShipmentRes = await supplyChainApiClientC.insertShipmentV1({
+    shipment,
+  });
+  t.ok(insertShipmentRes, "insertShipmentRes truthy OK");
+  t.true(
+    insertShipmentRes.status > 199,
+    "insertShipmentRes status > 199 truthy OK",
+  );
+  t.true(
+    insertShipmentRes.status < 300,
+    "insertShipmentRes status < 300 truthy OK",
+  );
+
+  const listShipmentRes2 = await supplyChainApiClientC.listShipmentV1();
+  t.ok(listShipmentRes2, "listShipmentRes2 truthy OK");
+  t.true(
+    listShipmentRes2.status > 199,
+    "listShipmentRes2 status > 199 truthy OK",
+  );
+  t.true(
+    listShipmentRes2.status < 300,
+    "listShipmentRes2 status < 300 truthy OK",
+  );
+
+  const shipments = listShipmentRes2.data.data;
+  const [firstShipment] = shipments;
+  t.equal(shipment.id, firstShipment.id, "Inserted shipment matches IDs OK");
 
   t.end();
 });

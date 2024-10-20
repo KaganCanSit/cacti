@@ -1,5 +1,5 @@
 site_name: Using and Developing with Hyperledger Cacti
-site_url: https://hyperledger.github.io/cacti
+site_url: !ENV [SITE_URL, 'https://${{ github.repository_owner }}.github.io/cacti']
 repo_name: hyperledger/cacti
 repo_url: https://github.com/hyperledger/cacti
 theme:
@@ -74,6 +74,7 @@ markdown_extensions:
   - pymdownx.tilde
 plugins:
   - search
+  - swagger-ui-tag
   - mike
 extra:
   analytics:
@@ -110,18 +111,26 @@ nav:
       - Connector Besu: cactus/packages/cactus-plugin-ledger-connector-besu.md
       - Connector Corda: cactus/packages/cactus-plugin-ledger-connector-corda.md
       - Connector Fabric: cactus/packages/cactus-plugin-ledger-connector-fabric.md
-      - Connector Quorum: cactus/packages/cactus-plugin-ledger-connector-quorum.md
       - Test Api Client: cactus/packages/cactus-test-api-client.md
       - Test CMD Api Server: cactus/packages/cactus-test-cmd-api-server.md
-      - Test Connector Quorum: cactus/packages/cactus-test-plugin-ledger-connector-quorum.md
       - Test Tooling: cactus/packages/cactus-test-tooling.md
+    - Ledger Browser:
+      - Overview:  cactus/ledger-browser/overview.md
+      - Setup:  cactus/ledger-browser/setup.md
+      - Plugin Apps:
+        - App Patterns:  cactus/ledger-browser/plugin-apps/app-patterns.md
+        - Ethereum Browser:  cactus/ledger-browser/plugin-apps/ethereum-browser.md
+        - Hyperledger Fabric Browser:  cactus/ledger-browser/plugin-apps/fabric-browser.md
+      - Developer Guide:
+        - Overview:  cactus/ledger-browser/developer-guide/overview.md
+        - Architecture:  cactus/ledger-browser/developer-guide/architecture.md
+        - Tutorial:  cactus/ledger-browser/developer-guide/tutorial.md
     - Ledger Support:
       - Overview: cactus/support.md
       - Hyperledger Besu: cactus/support/besu.md
       - R3 Corda: cactus/support/corda.md
       - Hyperledger Fabric: cactus/support/fabric.md
       - Hyperledger Iroha: cactus/support/iroha.md
-      - Quorum: cactus/support/quorum.md
       - xDai: cactus/support/xdai.md
   - Weaver:
     - Framework: weaver/introduction.md
@@ -192,6 +201,7 @@ nav:
     - Business Usage: references/business.md
     - Project Best Practices: references/best-practices.md
     - GitHub Contributions: references/github.md
+    - OpenAPI Specs: references/openapi/index.md
   - Contributing:
     - How to Contribute: contributing/how-to-contribute.md
     - Reporting a Bug: contributing/reporting-a-bug.md

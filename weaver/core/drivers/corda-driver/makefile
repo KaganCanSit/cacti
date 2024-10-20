@@ -1,7 +1,7 @@
 DOCKER_IMAGE_NAME ?= cacti-weaver-driver-corda
 DOCKER_TAG ?= `cat ./VERSION`
 DOCKER_REGISTRY ?= ghcr.io/hyperledger
-GIT_URL = https://github.com/hyperledger/cacti/weaver/core/drivers/corda-driver
+GIT_URL = https://github.com/hyperledger-cacti/cacti/weaver/core/drivers/corda-driver
 
 COMPOSE_ARG ?=
 
@@ -52,11 +52,11 @@ run:
 	
 .PHONY: deploy
 deploy:
-	docker-compose $(COMPOSE_ARG) up -d
+	docker compose $(COMPOSE_ARG) up -d
 	
 .PHONY: stop
 stop:
-	docker-compose $(COMPOSE_ARG) down
+	docker compose $(COMPOSE_ARG) down
 	
 .PHONY: clean
 clean:

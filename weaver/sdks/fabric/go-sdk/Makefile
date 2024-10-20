@@ -11,5 +11,12 @@ build-local: run-vendor build undo-vendor
 build:
 	go build -v ./...
 
+test-local: run-vendor test undo-vendor
+
+test:
+	cd helpers && go test -v .
+	cd asset-manager && go test -v .
+	cd interoperablehelper && go test -v .
+
 clean:
 	rm -rf vendor

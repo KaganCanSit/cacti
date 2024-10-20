@@ -44,10 +44,10 @@ import { PluginConsortiumManual } from "@hyperledger/cactus-plugin-consortium-ma
 import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
 
 import {
-  PluginLedgerConnectorQuorum,
+  PluginLedgerConnectorXdai,
   Web3SigningCredentialType,
-  DefaultApi as QuorumApi,
-} from "@hyperledger/cactus-plugin-ledger-connector-quorum";
+  DefaultApi as XdaiApi,
+} from "@hyperledger/cactus-plugin-ledger-connector-xdai";
 
 import {
   PluginLedgerConnectorBesu,
@@ -60,16 +60,22 @@ import {
   DefaultEventHandlerStrategy,
 } from "@hyperledger/cactus-plugin-ledger-connector-fabric";
 
-import {
-  SupplyChainAppDummyInfrastructure,
-  org1Env,
-} from "./infrastructure/supply-chain-app-dummy-infrastructure";
+import { FABRIC_25_LTS_FABRIC_SAMPLES_ENV_INFO_ORG_1 } from "@hyperledger/cactus-test-tooling";
+
+import { SupplyChainAppDummyInfrastructure } from "./infrastructure/supply-chain-app-dummy-infrastructure";
 import {
   Configuration,
   DefaultApi as SupplyChainApi,
 } from "@hyperledger/cactus-example-supply-chain-business-logic-plugin";
 import { SupplyChainCactusPlugin } from "@hyperledger/cactus-example-supply-chain-business-logic-plugin";
 import { DiscoveryOptions } from "fabric-network";
+
+/**
+ * The log pattern message that will be printed on stdout when the
+ * Supply Chain Application finished booting (it can take a long time).
+ */
+export const SUPPLY_CHAIN_APP_OK_LOG_MSG_PATTERN =
+  "Cacti API Server - REST API reachable at:";
 
 export interface ISupplyChainAppOptions {
   disableSignalHandlers?: true;
@@ -85,7 +91,7 @@ export class SupplyChainApp {
   private readonly ledgers: SupplyChainAppDummyInfrastructure;
   public readonly keychain: IPluginKeychain;
   private _besuApiClient?: BesuApi;
-  private _quorumApiClient?: QuorumApi;
+  private _xdaiApiClient?: XdaiApi;
   private _fabricApiClient?: FabricApi;
   private authorizationConfig?: IAuthorizationConfig;
   private token?: string;
@@ -98,9 +104,9 @@ export class SupplyChainApp {
     }
   }
 
-  public get quorumApiClientOrThrow(): QuorumApi {
-    if (this._quorumApiClient) {
-      return this._quorumApiClient;
+  public get xdaiApiClientOrThrow(): XdaiApi {
+    if (this._xdaiApiClient) {
+      return this._xdaiApiClient;
     } else {
       throw new Error("Invalid state: ledgers were not started yet.");
     }
@@ -192,21 +198,38 @@ export class SupplyChainApp {
     this.log.debug(`Starting SupplyChainApp...`);
 
     if (!this.options.disableSignalHandlers) {
-      exitHook((callback: IAsyncExitHookDoneCallback) => {
-        this.stop().then(callback);
+      exitHook((onHookDone: IAsyncExitHookDoneCallback) => {
+        this.log.info("Starting async-exit-hook for supply-chain-app ...");
+        this.stop()
+          .catch((ex: unknown) => {
+            this.log.warn("Failed async-exit-hook for supply-chain-app", ex);
+            throw ex;
+          })
+          .finally(() => {
+            this.log.info("Concluded async-exit-hook for supply-chain-app ...");
+            onHookDone();
+          });
+        this.log.info("Started async-exit-hook for supply-chain-app OK");
       });
-      this.log.debug(`Registered signal handlers for graceful auto-shutdown`);
+      this.log.info("Registered async-exit-hook for supply-chain-app shutdown");
     }
 
+    this.onShutdown(async () => {
+      this.log.info("SupplyChainApp onShutdown() - stopping ledgers...");
+      await this.ledgers.stop();
+      this.log.info("SupplyChainApp onShutdown() - stopped ledgers OK");
+    });
     await this.ledgers.start();
-    this.onShutdown(() => this.ledgers.stop());
 
     const contractsInfo = await this.ledgers.deployContracts();
 
     const besuAccount = await this.ledgers.besu.createEthTestAccount();
     await this.keychain.set(besuAccount.address, besuAccount.privateKey);
-    const quorumAccount = await this.ledgers.quorum.createEthTestAccount();
-    await this.keychain.set(quorumAccount.address, quorumAccount.privateKey);
+    const xdaiBesuAccount = await this.ledgers.xdaiBesu.createEthTestAccount();
+    await this.keychain.set(
+      xdaiBesuAccount.address,
+      xdaiBesuAccount.privateKey,
+    );
 
     const enrollAdminOut = await this.ledgers.fabric.enrollAdmin();
     const adminWallet = enrollAdminOut[1];
@@ -239,7 +262,7 @@ export class SupplyChainApp {
       basePath: nodeApiHostA,
       baseOptions,
     });
-    const quorumConfig = new Configuration({
+    const xdaiBesuConfig = new Configuration({
       basePath: nodeApiHostB,
       baseOptions,
     });
@@ -249,7 +272,7 @@ export class SupplyChainApp {
     });
 
     const besuApiClient = new BesuApi(besuConfig);
-    const quorumApiClient = new QuorumApi(quorumConfig);
+    const xdaiApiClient = new XdaiApi(xdaiBesuConfig);
     const fabricApiClient = new FabricApi(fabricConfig);
 
     const keyPairA = await generateKeyPair("ES256K");
@@ -275,7 +298,7 @@ export class SupplyChainApp {
     this.log.info(`Configuring Cactus Node for Ledger A...`);
     const rpcApiHostA = await this.ledgers.besu.getRpcApiHttpHost();
     const rpcApiWsHostA = await this.ledgers.besu.getRpcApiWsHost();
-    const rpcApiHostB = await this.ledgers.quorum.getRpcApiHttpHost();
+    const rpcApiHostB = await this.ledgers.xdaiBesu.getRpcApiHttpHost();
 
     const connectionProfile =
       await this.ledgers.fabric.getConnectionProfileOrg1();
@@ -299,7 +322,7 @@ export class SupplyChainApp {
           contracts: contractsInfo,
           instanceId: uuidv4(),
           besuApiClient,
-          quorumApiClient,
+          xdaiApiClient,
           fabricApiClient,
           web3SigningCredential: {
             keychainEntryKey: besuAccount.address,
@@ -343,10 +366,10 @@ export class SupplyChainApp {
           contracts: contractsInfo,
           instanceId: uuidv4(),
           besuApiClient,
-          quorumApiClient,
+          xdaiApiClient,
           fabricApiClient,
           web3SigningCredential: {
-            keychainEntryKey: quorumAccount.address,
+            keychainEntryKey: xdaiBesuAccount.address,
             keychainId: this.keychain.getKeychainId(),
             type: Web3SigningCredentialType.CactusKeychainRef,
           },
@@ -355,14 +378,14 @@ export class SupplyChainApp {
       ],
     });
 
-    const quorumConnector = new PluginLedgerConnectorQuorum({
-      instanceId: "PluginLedgerConnectorQuorum_B",
+    const xdaiConnector = new PluginLedgerConnectorXdai({
+      instanceId: "PluginLedgerConnectorXdai_B",
       rpcApiHttpHost: rpcApiHostB,
       logLevel: this.options.logLevel,
       pluginRegistry: registryB,
     });
 
-    registryB.add(quorumConnector);
+    registryB.add(xdaiConnector);
 
     const apiServerB = await this.startNode(httpApiB, httpGuiB, registryB);
 
@@ -386,9 +409,9 @@ export class SupplyChainApp {
           contracts: contractsInfo,
           instanceId: uuidv4(),
           besuApiClient,
-          quorumApiClient,
+          xdaiApiClient,
           fabricApiClient,
-          fabricEnvironment: org1Env,
+          fabricEnvironment: FABRIC_25_LTS_FABRIC_SAMPLES_ENV_INFO_ORG_1,
         }),
         this.keychain,
       ],
@@ -403,7 +426,7 @@ export class SupplyChainApp {
       instanceId: "PluginLedgerConnectorFabric_C",
       dockerBinary: "/usr/local/bin/docker",
       peerBinary: "peer",
-      cliContainerEnv: org1Env,
+      cliContainerEnv: FABRIC_25_LTS_FABRIC_SAMPLES_ENV_INFO_ORG_1,
       connectionProfile: connectionProfile,
       sshConfig: sshConfig,
       logLevel: "INFO",
@@ -427,7 +450,7 @@ export class SupplyChainApp {
       apiServerC,
       besuApiClient,
       fabricApiClient,
-      quorumApiClient,
+      xdaiApiClient,
       supplyChainApiClientA: new SupplyChainApi(
         new Configuration({ basePath: nodeApiHostA, baseOptions }),
       ),
@@ -441,8 +464,12 @@ export class SupplyChainApp {
   }
 
   public async stop(): Promise<void> {
+    let i = 0;
     for (const hook of this.shutdownHooks) {
+      i++;
+      this.log.info("Executing exit hook #%d...", i);
       await hook(); // FIXME add timeout here so that shutdown does not hang
+      this.log.info("Executed exit hook #%d OK", i);
     }
   }
 
@@ -512,8 +539,8 @@ export class SupplyChainApp {
     };
 
     const ledger2: Ledger = {
-      id: "QuorumDemoLedger",
-      ledgerType: LedgerType.Quorum2X,
+      id: "XdaiBesuDemoLedger",
+      ledgerType: LedgerType.Besu2X,
     };
 
     cactusNodeB.ledgerIds.push(ledger2.id);
@@ -542,7 +569,7 @@ export class SupplyChainApp {
 
     const ledger3: Ledger = {
       id: "FabricDemoLedger",
-      ledgerType: LedgerType.Fabric14X,
+      ledgerType: LedgerType.Fabric2,
     };
 
     cactusNodeC.ledgerIds.push(ledger3.id);
@@ -585,21 +612,38 @@ export class SupplyChainApp {
     properties.cockpitHost = addressInfoCockpit.address;
     properties.cockpitPort = addressInfoCockpit.port;
     properties.grpcPort = 0; // TODO - make this configurable as well
-    properties.logLevel = this.options.logLevel || "INFO";
+    properties.logLevel = "WARN"; // silence the logs about 0.0.0.0 web hosts
     properties.authorizationProtocol = AuthorizationProtocol.JSON_WEB_TOKEN;
     properties.authorizationConfigJson =
       await this.getOrCreateAuthorizationConfig();
+    properties.crpcPort = 0;
+    // We must disable the API server's own shutdown hooks because if we didn't
+    // it would clash with the supply chain app's own shutdown hooks and the
+    // async functions wouldn't be waited for their conclusion leaving the containers
+    // running after the supply chain app NodeJS process has exited.
+    properties.enableShutdownHook = false;
 
     const apiServer = new ApiServer({
       config: properties,
       httpServerApi,
       httpServerCockpit,
       pluginRegistry,
+      enableShutdownHook: false,
     });
 
-    this.onShutdown(() => apiServer.shutdown());
+    this.onShutdown(async () => {
+      this.log.info("SupplyChainApp onShutdown() - stopping API server");
+      await apiServer.shutdown();
+      this.log.info("SupplyChainApp onShutdown() - stopped API server OK");
+    });
 
     await apiServer.start();
+
+    const restApiUrl = `http://127.0.0.1:${properties.apiPort}`;
+    this.log.info("%s: %s", SUPPLY_CHAIN_APP_OK_LOG_MSG_PATTERN, restApiUrl);
+
+    const guiUrl = `http://127.0.0.1:${properties.cockpitPort}`;
+    this.log.info("SupplyChainApp Web GUI - reachable at: %s", guiUrl);
 
     return apiServer;
   }
@@ -610,7 +654,7 @@ export interface IStartInfo {
   readonly apiServerB: ApiServer;
   readonly apiServerC: ApiServer;
   readonly besuApiClient: BesuApi;
-  readonly quorumApiClient: QuorumApi;
+  readonly xdaiApiClient: XdaiApi;
   readonly fabricApiClient: FabricApi;
   readonly supplyChainApiClientA: SupplyChainApi;
   readonly supplyChainApiClientB: SupplyChainApi;

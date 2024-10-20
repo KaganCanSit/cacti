@@ -11,16 +11,11 @@ docs-cactus/source/conf.py
 docs/docs/contributing/requesting-a-change.md
 
 # Cannot be edited due to configuration schema of third party software
-examples/register-indy-data/register-indy-data.py
-
-# Cannot be edited due to configuration schema of third party software
-tools/docker/indy-testnet/Dockerfile
-
-# Cannot be edited due to configuration schema of third party software
 packages/cactus-test-tooling/src/main/typescript/keycloak/keycloak-container.ts
 
 # Generated code that cannot be modified
 examples/cactus-example-carbon-accounting-backend/src/main/json/generated/build-info/**
+**/src/main/go/generated/openapi/go-client/client.go
 
 # Cannot be edited as its a name of a imported Corda library, and Corda syntax
 weaver/core/drivers/corda-driver/src/main/kotlin/CustomSerializationWhitelist.kt
@@ -32,3 +27,10 @@ weaver/tests/network-setups/corda/shared
 
 # Commit messages snuck disallowed terminology into the changelog files.
 CHANGELOG.md
+
+# Ignore the Gradle Wrapper scripts because they are vendored dependencies that we cannot alter
+**/gradlew
+
+# We  can't get around this one because there's a yarn plugin whose install URL 
+# only supports the old default branch name in git
+.yarnrc.yml

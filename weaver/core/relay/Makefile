@@ -1,7 +1,7 @@
 DOCKER_IMAGE_NAME ?= cacti-weaver-relay
 DOCKER_TAG ?= `cat ./VERSION`
 DOCKER_REGISTRY ?= ghcr.io/hyperledger
-GIT_URL = https://github.com/hyperledger/cacti/weaver
+GIT_URL = https://github.com/hyperledger-cacti/cacti/weaver
 
 PROTOS_TAG ?= v1.4.2
 
@@ -155,17 +155,17 @@ pushi-images: push-server push-client push-driver push-allinone
 .PHONY: start
 start:
 	docker network create relay || true
-	docker-compose $(COMPOSE_ARG) up -d
+	docker compose $(COMPOSE_ARG) up -d
 # Starts an instance of the relay container.
 #
 .PHONY: start-server
 start-server:
 	docker network create relay || true
-	docker-compose $(COMPOSE_ARG) up -d relay-server
+	docker compose $(COMPOSE_ARG) up -d relay-server
 
 .PHONY: stop
 stop:
-	docker-compose $(COMPOSE_ARG) down
+	docker compose $(COMPOSE_ARG) down
 	
 .PHONY: convert-compose-method1
 convert-compose-method1:
@@ -182,7 +182,7 @@ clean:
 	@echo -e "\033[1mCLEAN\033[0m - Removing all artifacts..."
 	-rm -rf protos-rs
 	-rm fingerprint.json
-	-docker-compose down
+	-docker compose down
 	-docker rmi $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_SERVER)
 	-docker rmi $(DOCKER_IMAGE_SERVER)
 	-docker rmi $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_CLIENT)

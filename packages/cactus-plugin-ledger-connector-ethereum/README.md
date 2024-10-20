@@ -181,36 +181,27 @@ await apiClient.runTransactionV1({
 });
 ```
 
-### Offline signing utils
-- Use `signTransaction` from this package to sign transactions payload locally (outside of connector process).
-- Offline signed transaction can be send with `Web3SigningCredentialType.None` signing credetnial type in runTransactionV1 endpoint.
+### watchBlocksV1
+- ApiClient can be used to monitor for new blocks from the ledger with `watchBlocksV1` method.
+- When etherum node supports subscription (e.g. websocket protocol is used), then blocks connector will subscribe to new block header event (recommended).
+- If ethereum node supports HTTP access only, then polling method will be used.
+
+#### Example
 
 ``` typescript
-// Offline sign transaction
-const { serializedTransactionHex } = signTransaction(
-  {
-    to: anotherAccount,
-    value: 10e6,
-    maxPriorityFeePerGas: 0,
-    maxFeePerGas: 0x40000000,
-    gasLimit: 21000,
-    type: 2
-  },
-  myPrivateKey,
-  {
-    networkId: 10,
-    chainId: 10,
-    defaultHardfork: "london",
-  },
-);
+const watchObservable = apiClient.watchBlocksV1({
+  getBlockData, // true - return transactions, false - return header only (default)
+  lastSeenBlock, // connector will push all blocks since lastSeenBlock (default - latest)
+  httpPollInterval // how often to poll the node (only for http-polling method)
+});
 
-// Send transaction payload to connector
-await apiClient.runTransactionV1({
-  web3SigningCredential: {
-    type: Web3SigningCredentialType.None,
+const subscription = watchObservable.subscribe({
+  next(event) {
+    // process block data
   },
-  transactionConfig: {
-    rawTransaction: serializedTransactionHex,
+  error(err) {
+    // handle error
+    subscription.unsubscribe();
   },
 });
 ```
@@ -264,23 +255,55 @@ artillery run ./.manual-geth-artillery-config.yaml
 - `./src/test/typescript/benchmark/cli`
   - `run-benchmark-environment.ts` CLI for starting test environment and patching template artillery config
 
-### Building/running the container image locally
-
-In the Cactus project root say:
-
-```sh
-DOCKER_BUILDKIT=1 docker build -f ./packages/cactus-plugin-ledger-connector-ethereum/Dockerfile . -t cplcb
-```
-
-Build with a specific version of the npm package:
-
-```sh
-DOCKER_BUILDKIT=1 docker build --build-arg NPM_PKG_VERSION=0.4.1 -f ./packages/cactus-plugin-ledger-connector-ethereum/Dockerfile . -t cplcb
-```
 
 #### Running the container
 
 Launch container with plugin configuration as an **environment variable**:
+```sh
+docker run \
+  --rm \
+  --publish 3000:3000 \
+  --publish 4000:4000 \
+  --env AUTHORIZATION_PROTOCOL='NONE' \
+  --env AUTHORIZATION_CONFIG_JSON='{}' \
+  --env GRPC_TLS_ENABLED=false \
+  --env API_TLS_CERT_PEM=- \
+  --env API_TLS_CLIENT_CA_PEM=- \
+  --env API_TLS_KEY_PEM=- \
+  --env API_TLS_ENABLED=false \
+  --env API_MTLS_ENABLED=false \
+  --env API_HOST=0.0.0.0 \
+  --env LOG_LEVEL=INFO \
+  ghcr.io/hyperledger/cactus-cmd-api-server:2024-07-03t18-38-45-dev-65adc3255 \
+  node index.js \
+  --plugins='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://localhost:8545", "rpcApiWsHost":"ws://localhost:8546", "instanceId": "some-unique-ethereum-connector-instance-id"}}]'
+```
+
+Launch container with plugin configuration as a **CLI argument**:
+```sh
+docker run \
+  --rm \
+  --publish 3000:3000 \
+  --publish 4000:4000 \
+  --env AUTHORIZATION_PROTOCOL='NONE' \
+  --env AUTHORIZATION_CONFIG_JSON='{}' \
+  --env GRPC_TLS_ENABLED=false \
+  --env API_TLS_CERT_PEM=- \
+  --env API_TLS_CLIENT_CA_PEM=- \
+  --env API_TLS_KEY_PEM=- \
+  --env API_TLS_ENABLED=false \
+  --env API_MTLS_ENABLED=false \
+  --env API_HOST=0.0.0.0 \
+  --env LOG_LEVEL=INFO \
+  ghcr.io/hyperledger/cactus-cmd-api-server:2024-07-03t18-38-45-dev-65adc3255 \
+  node index.js \
+    --plugins='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://localhost:8545", "rpcApiWsHost":"ws://localhost:8546", "instanceId": "some-unique-ethereum-connector-instance-id"}}]'
+```
+
+Launch container with **configuration file** mounted from host machine:
+```sh
+echo '{"plugins": [{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://127.0.0.1:8545", "rpcApiWsHost":"ws://127.0.0.1:8546", "instanceId": "some-unique-ethereum-connector-instance-id"}}]}' > .cacti-config.json
+```
 
 ```sh
 docker run \
@@ -289,64 +312,58 @@ docker run \
   --publish 4000:4000 \
   --env AUTHORIZATION_PROTOCOL='NONE' \
   --env AUTHORIZATION_CONFIG_JSON='{}' \
-  --env PLUGINS='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://localhost:8545", "instanceId": "some-unique-ethereum-connector-instance-id"}}]' \
-  cplcb
-```
-
-Launch container with plugin configuration as a **CLI argument**:
-
-```sh
-docker run \
-  --rm \
-  --publish 3000:3000 \
-   --publish 4000:4000 \
-  cplcb \
-    ./node_modules/@hyperledger/cactus-cmd-api-server/dist/lib/main/typescript/cmd/cactus-api.js \
-    --authorization-protocol='NONE' \
-    --authorization-config-json='{}' \
-    --plugins='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://localhost:8545", "instanceId": "some-unique-ethereum-connector-instance-id"}}]'
-```
-
-Launch container with **configuration file** mounted from host machine:
-
-```sh
-
-echo '{"authorizationProtocol":"NONE","authorizationConfigJson":{},"plugins":[{"packageName":"@hyperledger/cactus-plugin-ledger-connector-ethereum","type":"org.hyperledger.cactus.plugin_import_type.LOCAL","action":"org.hyperledger.cactus.plugin_import_action.INSTALL","options":{"rpcApiHttpHost":"http://localhost:8545","instanceId":"some-unique-ethereum-connector-instance-id"}}]}' > cactus.json
-
-docker run \
-  --rm \
-  --publish 3000:3000 \
-  --publish 4000:4000 \
-  --mount type=bind,source="$(pwd)"/cactus.json,target=/cactus.json \
-  cplcb \
-    ./node_modules/@hyperledger/cactus-cmd-api-server/dist/lib/main/typescript/cmd/cactus-api.js \
-    --config-file=/cactus.json
+  --env GRPC_TLS_ENABLED=false \
+  --env API_TLS_CERT_PEM=- \
+  --env API_TLS_CLIENT_CA_PEM=- \
+  --env API_TLS_KEY_PEM=- \
+  --env API_TLS_ENABLED=false \
+  --env API_MTLS_ENABLED=false \
+  --env API_HOST=0.0.0.0 \
+  --env LOG_LEVEL=INFO \
+  --mount type=bind,source="$(pwd)"/.cacti-config.json,target=/.cacti-config.json \
+  ghcr.io/hyperledger/cactus-cmd-api-server:2024-07-03t18-38-45-dev-65adc3255 \
+    node index.js \
+    --config-file=/.cacti-config.json
 ```
 
 #### Testing API calls with the container
 
-Don't have a ethereum network on hand to test with? Test or develop against our ethereum All-In-One container!
+Don't have a Ethereum network on hand to test with? Test or develop against our Besu All-In-One container!
 
 **Terminal Window 1 (Ledger)**
-
-```sh
-docker run -p 0.0.0.0:8545:8545/tcp  -p 0.0.0.0:8546:8546/tcp  -p 0.0.0.0:8888:8888/tcp  -p 0.0.0.0:9001:9001/tcp  -p 0.0.0.0:9545:9545/tcp hyperledger/cactus-quorum-all-in-one:latest
-```
-
-**Terminal Window 2 (Cactus API Server)**
-
 ```sh
 docker run \
-  --network host \
+  --publish 0.0.0.0:8545:8545/tcp \
+  --publish 0.0.0.0:8546:8546/tcp \
+  --publish 0.0.0.0:8888:8888/tcp \
+  --publish 0.0.0.0:9001:9001/tcp \
+  --publish 0.0.0.0:9545:9545/tcp \
+  ghcr.io/hyperledger/cactus-besu-all-in-one:2024-07-04-8c030ae
+```
+
+**Terminal Window 2 (Cacti API Server)**
+```sh
+docker run \
+  --network=host \
   --rm \
   --publish 3000:3000 \
   --publish 4000:4000 \
-  --env PLUGINS='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://localhost:8545", "instanceId": "some-unique-ethereum-connector-instance-id"}}]' \
-  cplcb
+  --env AUTHORIZATION_PROTOCOL='NONE' \
+  --env AUTHORIZATION_CONFIG_JSON='{}' \
+  --env GRPC_TLS_ENABLED=false \
+  --env API_TLS_CERT_PEM=- \
+  --env API_TLS_CLIENT_CA_PEM=- \
+  --env API_TLS_KEY_PEM=- \
+  --env API_TLS_ENABLED=false \
+  --env API_MTLS_ENABLED=false \
+  --env API_HOST=0.0.0.0 \
+  --env LOG_LEVEL=INFO \
+  ghcr.io/hyperledger/cactus-cmd-api-server:2024-07-03t18-38-45-dev-65adc3255 \
+  node index.js \
+  --plugins='[{"packageName": "@hyperledger/cactus-plugin-ledger-connector-ethereum", "type": "org.hyperledger.cactus.plugin_import_type.LOCAL", "action": "org.hyperledger.cactus.plugin_import_action.INSTALL",  "options": {"rpcApiHttpHost": "http://127.0.0.1:8545", "rpcApiWsHost":"ws://127.0.0.1:8546", "instanceId": "some-unique-besu-connector-instance-id"}}]'
 ```
 
 **Terminal Window 3 (curl - replace eth accounts as needed)**
-
 ```sh
 curl --location --request POST 'http://127.0.0.1:4000/api/v1/plugins/@hyperledger/cactus-plugin-ledger-connector-ethereum/run-transaction' \
 --header 'Content-Type: application/json' \
@@ -356,19 +373,17 @@ curl --location --request POST 'http://127.0.0.1:4000/api/v1/plugins/@hyperledge
       "secret": "c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
       "type": "PRIVATE_KEY_HEX"
     },
-    "consistencyStrategy": {
-      "blockConfirmations": 0,
-      "receiptType": "NODE_TX_POOL_ACK"
-    },
     "transactionConfig": {
       "from": "627306090abaB3A6e1400e9345bC60c78a8BEf57",
       "to": "f17f52151EbEF6C7334FAD080c5704D77216b732",
-      "value": 1,
-      "gas": 10000000
+      "value": "1",
+      "maxPriorityFeePerGas": "0",
+      "maxFeePerGas": "40000000",
+      "gasLimit": "21000",
+      "type": 2
     }
 }'
 ```
-
 The above should produce a response that looks similar to this:
 
 ```json
@@ -448,7 +463,7 @@ There's a simple script for checking integration with [alchemy platform](https:/
 
 We welcome contributions to Hyperledger Cactus in many forms, and there’s always plenty to do!
 
-Please review [CONTIRBUTING.md](../../CONTRIBUTING.md) to get started.
+Please review [CONTRIBUTING.md](../../CONTRIBUTING.md) to get started.
 
 ## License
 

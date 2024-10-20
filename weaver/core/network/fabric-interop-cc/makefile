@@ -1,7 +1,7 @@
 DOCKER_IMAGE_NAME ?= cacti-weaver-imodule-fabric
 DOCKER_TAG ?= `cat contracts/interop/VERSION`
 DOCKER_REGISTRY ?= ghcr.io/hyperledger
-GIT_URL = https://github.com/hyperledger/cacti/weaver/core/network/fabric-interop-cc
+GIT_URL = https://github.com/hyperledger-cacti/cacti/weaver/core/network/fabric-interop-cc
 
 .PHONY: build protos all clean image push-image check-if-tag-exists
 
@@ -15,7 +15,7 @@ list-names:
 	echo ${DOCKER_IMAGE_NAME}:$(DOCKER_TAG)
 
 image:
-	(cd contracts/interop && make run-vendor)
+	(cd contracts/interop && make run-vendor && go mod tidy)
 	docker build --build-arg GIT_URL=$(GIT_URL) -t ${DOCKER_IMAGE_NAME}:$(DOCKER_TAG) .
 
 check-if-tag-exists:

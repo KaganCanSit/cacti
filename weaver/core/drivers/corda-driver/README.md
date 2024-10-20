@@ -111,7 +111,7 @@ To push image to github container registry:
 
 **NOTE:** Push image to `hyperledger-labs` only after PR approval, first test it by deploying it on your fork by running (instead of last step above): `make push-image DOCKER_REGISTRY=ghcr.io/<username>`, where replace `<username>` with your git username.
 
-### Docker-Compose Deployment
+### Docker Compose Deployment
 
 * Copy `.env.docker.template` to `.env`
     - `NETWORK_NAME`: Used as suffix to driver-corda container name, i.e. `driver-corda-<network-name>` will be the name of the container.
@@ -120,7 +120,7 @@ To push image to github container registry:
     - `DRIVER_RPC_PASSWORD`: Password for the above RPC user.
     - `EXTERNAL_NETWORK`: Name of the docker network in which the Corda containers are deployed.
     - `DOCKER_IMAGE_NAME`: _Keep this unchanged_.
-    - `DOCKER_TAG`: Refer here for the image tags available: [cacti-weaver-driver-corda](https://github.com/hyperledger/cacti/pkgs/container/cacti-weaver-driver-corda)
+    - `DOCKER_TAG`: Refer here for the image tags available: [cacti-weaver-driver-corda](https://github.com/hyperledger-cacti/cacti/pkgs/container/cacti-weaver-driver-corda)
     - `COMPOSE_PROJECT_NAME`: Docker project name for the Corda network to which this driver is supposed to attach. By default, the folder name of the Corda network's `docker-compose.yml`, is the project name.
     - `COMPOSE_PROJECT_NETWORK`: Docker project network name for the Corda network to which this driver is supposed to attach. By default, `default` is the project network name.
     - `RELAY_TLS`: Boolean flag indicating whether or not the local relay requires TLS connections
@@ -133,7 +133,7 @@ To push image to github container registry:
 * Create a Personal Access Token with read packages access in github. Refer [Creating a Personal Access Token](https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token) for help.
 * Run `docker login ghcr.io` and use your github username and personal access token as password.
 * Run: `make deploy`.
-* To stop, run: `docker-compose down`
+* To stop, run: `docker compose down`
 
 ## Documentation
 
@@ -147,6 +147,41 @@ generate the code docs, run the following:
 The docs are then located in `build/dokka/driver-corda`. Opening
 `index.html` in your browser will allow you to navigate through the project
 structure.
+
+## Trivy Security Audit of Dependencies
+
+> Note you either need to be using the VSCode Dev Container or having installed
+> Trivy yourself prior to running these steps.
+
+[Trivy Documentation & Install Guide](https://github.com/aquasecurity/trivy)
+
+The following command generates a `pom.xml` file with the same exact dependencies
+declared as they are in the build.gradle file.
+
+The reason why we need this step is because Trivy does not yet support build.gradle
+files, only pom.xml files.
+
+```sh
+./gradlew generatePomFileForPublication
+```
+
+After this step, we now have a pom.xml file, but with the wrong name because
+Trivy will only accept these if the file is called exactly `pom.xml` but the
+script above will name it as `pom-default.xml` which Trivy ignores, so we rename:
+
+```sh
+mv ./build/publications/maven/pom-default.xml ./build/publications/maven/pom.xml
+```
+
+Finally, we are ready to point Trivy to the directory where the `pom.xml` file
+is located and actually run the scan:
+
+```sh
+trivy fs --scanners=vuln ./build/publications/maven/
+```
+
+More information about the Maven Publish Plugin can be found here:
+https://docs.gradle.org/current/userguide/publishing_maven.html
 
 ## TODO
 

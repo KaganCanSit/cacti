@@ -1,4 +1,4 @@
-import { Express, Request, Response } from "express";
+import type { Express, Request, Response } from "express";
 
 import {
   IWebServiceEndpoint,
@@ -101,6 +101,10 @@ export class CounterpartyHTLCEndpoint implements IWebServiceEndpoint {
         );
       }) as unknown as PluginHTLCCoordinatorBesu;
       const resBody = await connector.counterpartyHTLC(request);
+      res.setHeader(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains; preload",
+      );
       res.json(resBody);
     } catch (ex) {
       this.log.error(`Crash while serving ${reqTag}`, ex);

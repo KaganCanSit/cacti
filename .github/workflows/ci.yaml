@@ -1,12 +1,25 @@
+# Below are the full description for the shorten job names:
+#
+# ce - cactus-example
+# cp - cactus-plugin
+# cpk - cactus-plugin-keychain
+# cpl - cactus-plugin-ledger
+# cplc - cactus-plugin-ledger-connector
+# plc - plugin-ledger-connector
+# cpp - cactus-plugin-persistence
+# ct - cactus-test
+# ctp - cactus-test-plugin
 ---
 env:
   NODEJS_VERSION: v18.18.2
+  RUN_TRIVY_SCAN: true
+  RUN_CODE_COVERAGE: true
 jobs:
   ActionLint:
     uses: ./.github/workflows/actionlint.yaml
   DCI-Lint:
     name: DCI-Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - id: lint-git-repo
         name: Lint Git Repo
@@ -15,6 +28,141 @@ jobs:
           lint-git-repo-request: '{"cloneUrl": "${{ github.server_url }}/${{ github.repository }}.git", "fetchArgs": ["--update-head-ok", "--no-tags", "--prune", "--progress", "--no-recurse-submodules", "--depth=1", "origin" ,"+${{ github.sha }}:${{ github.ref }}"], "checkoutArgs": [ "${{ github.ref }}"], "targetPhrasePatterns": [], "configDefaultsUrl": "https://inclusivenaming.org/json/dci-lint-config-recommended-v1.json" }'
       - name: Get the output response
         run: echo "${{ steps.lint-git-repo.outputs.lint-git-repo-response }}"
+
+  check-coverage:
+    outputs:
+      run-coverage: ${{ steps.set-output.outputs.run-coverage }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - name: Set output
+        id: set-output
+        run: echo "run-coverage=${{ env.RUN_CODE_COVERAGE }}" >> "$GITHUB_OUTPUT"
+
+  compute_changed_packages:
+    outputs:
+      cmd-api-server-changed: ${{ steps.changes.outputs.cmd-api-server-changed }}
+      plugin-ledger-connector-polkadot-changed: ${{ steps.changes.outputs.plugin-ledger-connector-polkadot-changed }}
+      plugin-ledger-connector-aries-changed: ${{ steps.changes.outputs.plugin-ledger-connector-aries-changed }}
+      plugin-ledger-connector-besu-changed: ${{ steps.changes.outputs.plugin-ledger-connector-besu-changed }}
+      plugin-ledger-connector-corda-changed: ${{ steps.changes.outputs.plugin-ledger-connector-corda-changed }}
+      plugin-ledger-connector-fabric-changed: ${{ steps.changes.outputs.plugin-ledger-connector-fabric-changed }}
+      plugin-ledger-connector-ethereum-changed: ${{ steps.changes.outputs.plugin-ledger-connector-ethereum-changed }}
+      plugin-ledger-connector-iroha2-changed: ${{ steps.changes.outputs.plugin-ledger-connector-iroha2-changed }}
+      plugin-ledger-connector-stellar-changed: ${{ steps.changes.outputs.plugin-ledger-connector-stellar-changed }}
+      plugin-htlc-coordinator-besu-changed: ${{ steps.changes.outputs.plugin-htlc-coordinator-besu-changed }}
+      test-tooling-changed: ${{ steps.changes.outputs.test-tooling-changed }}
+      ghcr-dev-container-vscode-changed: ${{ steps.changes.outputs.ghcr-dev-container-vscode-changed }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            cmd-api-server-changed:
+              - './packages/cactus-cmd-api-server/**'
+              - './packages/cactus-test-cmd-api-server/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-vault/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-polkadot-changed:
+              - './packages/cactus-plugin-ledger-connector-polkadot/**!(*.md|*.css|*.html|*.jpg|*.jpeg|*.png)'
+              - './packages/cactus-common/**!(*.md|*.css|*.html|*.jpg|*.jpeg|*.png)'
+              - './packages/cactus-core/**!(*.md|*.css|*.html|*.jpg|*.jpeg|*.png)'
+              - './packages/cactus-core-api/**!(*.md|*.css|*.html|*.jpg|*.jpeg|*.png)'
+              - './packages/cactus-test-tooling/**!(*.md|*.css|*.html|*.jpg|*.jpeg|*.png)'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-aries-changed:
+              - './packages/cactus-plugin-ledger-connector-aries/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-besu-changed:
+              - './packages/cactus-plugin-ledger-connector-besu/**'
+              - './packages/cactus-test-plugin-ledger-connector-besu/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml''
+
+            plugin-ledger-connector-corda-changed:
+              - './packages/cactus-plugin-ledger-connector-corda/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-fabric-changed:
+              - './packages/cactus-plugin-ledger-connector-fabric/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-ethereum-changed:
+              - './packages/cactus-plugin-ledger-connector-ethereum/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-test-geth-ledger/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-iroha2-changed:
+              - './packages/cactus-plugin-ledger-connector-iroha2/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml'
+
+            plugin-ledger-connector-stellar-changed:
+              - './packages/cacti-plugin-ledger-connector-stellar/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml'
+
+            test-tooling-changed:
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-common/**'
+              # - './.github/workflows/ci.yaml'
+
+            ghcr-dev-container-vscode-changed:
+              - './.devcontainer/**'
+
+            plugin-htlc-coordinator-besu-changed:
+              - './extensions/cactus-plugin-htlc-coordinator-besu/**'
+              - './packages/cactus-plugin-htlc-eth-besu/**'
+              - './packages/cactus-plugin-htlc-eth-besu-erc20/**'
+              - './packages/cactus-plugin-ledger-connector-besu/**'
+              - './packages/cactus-test-plugin-htlc-eth-besu-erc20/**'
+              - './packages/cactus-common/**'
+              - './packages/cactus-core/**'
+              - './packages/cactus-core-api/**'
+              - './packages/cactus-test-tooling/**'
+              - './packages/cactus-plugin-keychain-memory/**'
+              # - './.github/workflows/ci.yaml'
+
   build-dev:
     continue-on-error: false
     env:
@@ -26,17 +174,17 @@ jobs:
       CUSTOM_CHECKS_DISABLED: true
       CONFIGURE_DISABLED: false
       CHECK_WORK_TREE_STATUS_DISABLED: true
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Initialize Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -57,23 +205,63 @@ jobs:
       TOOLS_VALIDATE_BUNDLE_NAMES_DISABLED: true
       CUSTOM_CHECKS_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+      - run: git status --porcelain
+      - run: git status --porcelain | wc -l
       - run: yarn lint
+      - run: git status --porcelain
+      - run: git status --porcelain | wc -l
+
+      - name: Set env.GIT_INDEX_FILE_COUNT
+        id: set_env_git_index_file_count
+        run: |
+            echo "GIT_INDEX_FILE_COUNT=$(git status --porcelain | wc -l)" >> "$GITHUB_ENV"
+
+      - name: Print env.GIT_INDEX_FILE_COUNT
+        id: print_env_git_index_file_count
+        run: |
+            echo "${{ env.GIT_INDEX_FILE_COUNT }}"
+      - uses: actions/github-script@v7.0.1
+        id: set-result-git_index_file_count
+        with:
+          script: |
+            const { GIT_INDEX_FILE_COUNT } = process.env;
+            console.log(`env.GIT_INDEX_FILE_COUNT ${GIT_INDEX_FILE_COUNT}`);
+            return parseInt(GIT_INDEX_FILE_COUNT, 10);
+          result-encoding: string
+
+      - name: Get result Git Index File Count
+        id: get_result_git_index_file_count
+        run: echo "${{steps.set-result-git_index_file_count.outputs.result}}"
+
+      - name: Check Lint Side-effects
+        if: ${{ steps.set-result-git_index_file_count.outputs.result != 0 }}
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const failMsg = "yarn lint script produced version control " +
+              "side-effects: source files have been changed by it that are " +
+              "otherwise are under version control. " +
+              "This means (99% of the time) that you need to run the " +
+              "yarn lint script locally and then include the changes it " +
+              "makes in your own commit when submitting your pull request.";
+            core.setFailed(failMsg)
+
   yarn_codegen:
     continue-on-error: false
     env:
@@ -85,17 +273,17 @@ jobs:
       CUSTOM_CHECKS_DISABLED: true
       CONFIGURE_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -111,14 +299,14 @@ jobs:
       - name: Set env.GIT_INDEX_FILE_COUNT
         id: set_env_git_index_file_count
         run: |
-            echo "GIT_INDEX_FILE_COUNT=$(git status --porcelain | wc -l)" >> $GITHUB_ENV
+            echo "GIT_INDEX_FILE_COUNT=$(git status --porcelain | wc -l)" >> "$GITHUB_ENV"
 
       - name: Print env.GIT_INDEX_FILE_COUNT
         id: print_env_git_index_file_count
         run: |
             echo "${{ env.GIT_INDEX_FILE_COUNT }}"
 
-      - uses: actions/github-script@v6.4.1
+      - uses: actions/github-script@v7.0.1
         id: set-result-git_index_file_count
         with:
           script: |
@@ -133,7 +321,7 @@ jobs:
 
       - name: Check CodeGen Side-effects
         if: ${{ steps.set-result-git_index_file_count.outputs.result != 0 }}
-        uses: actions/github-script@v6.4.1
+        uses: actions/github-script@v7.0.1
         with:
           script: |
             const failMsg = "yarn codegen script produced version control " +
@@ -156,16 +344,16 @@ jobs:
       CONFIGURE_DISABLED: false
       CACTI_CUSTOM_CHECKS_REQUIRED_OPENAPI_SPEC_VERSION: 3.0.3
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -183,16 +371,16 @@ jobs:
       CUSTOM_CHECKS_DISABLED: true
       CONFIGURE_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -206,20 +394,21 @@ jobs:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-api-client/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: ./packages/cactus-api-client/src/test/typescript/integration/default-consortium-provider.test.ts
-      TAPE_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-api-client
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -227,28 +416,40 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
 
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-1
+          path: ./code-coverage-ts/**/
+
   cactus-cmd-api-server:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.cmd-api-server-changed == 'true'
     env:
       DEV_BUILD_DISABLED: false
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-cmd-api-server/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-cmd-api-server
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-cmd-api-server/src/test/typescript/integration/plugin-import-from-github.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/integration/plugin-import-without-install.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/integration/remote-plugin-imports.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/config/self-signed-certificate-generator/certificates-work-for-mutual-tls.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/config/self-signed-certificate-generator/generates-working-certificates.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-js-proto-loader-client-healthcheck.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-proto-gen-ts-client-healthcheck.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-proto-gen-ts-client-m-tls-enabled.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/plugins/install-basic-plugin-consortium-manual.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/plugins/install-basic-plugin-keychain-memory.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/plugins/install-basic-plugin-ledger-connector-fabric-0-7-0.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/plugins/install-basic-plugin-ledger-connector-quorum-0-7-0.test.ts}
+        --files={./packages/cactus-cmd-api-server/src/test/typescript/unit/config/self-signed-certificate-generator/certificates-work-for-mutual-tls.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/config/self-signed-certificate-generator/generates-working-certificates.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-js-proto-loader-client-healthcheck.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-proto-gen-ts-client-healthcheck.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/grpc-proto-gen-ts-client-m-tls-enabled.test.ts,./packages/cactus-cmd-api-server/src/test/typescript/unit/plugins/install-basic-plugin-ledger-connector-fabric-0-7-0.test.ts}
       TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -256,25 +457,89 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
 
       - run: ./tools/ci.sh
-  cactus-cmd-socketio-server:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-2
+          path: ./code-coverage-ts/**/
+
+      - name: build_ncc_bundle
+        run: yarn lerna run build:bundle --scope=@hyperledger/cactus-cmd-api-server
+
+      - name: ghcr.io/hyperledger/cactus-cmd-api-server
+        run: |
+          DOCKER_BUILDKIT=1 docker build \
+            --file ./packages/cactus-cmd-api-server/cmd-api-server.Dockerfile \
+            ./packages/cactus-cmd-api-server \
+            --tag cas \
+            --tag cmd-api-server \
+            --tag "ghcr.io/hyperledger/cactus-cmd-api-server:$(date +"%Y-%m-%dT%H-%M-%S" --utc)-dev-$(git rev-parse --short HEAD)"
+
+      - if: ${{ env.RUN_TRIVY_SCAN == 'true' }}
+        name: Run Trivy vulnerability scan for cmd-api-server
+        uses: aquasecurity/trivy-action@0.19.0
+        with:
+          image-ref: 'cmd-api-server'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          trivyignores: ./.trivyignore
+
+      - name: Ensure .tmp Directory Exists
+        run: mkdir -p .tmp/benchmark-results/cmd-api-server/
+
+     # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache@v4.0.2
+        with:
+          path: .tmp/benchmark-results/cmd-api-server/
+          key: ${{ runner.os }}-benchmark
+
+      - name: Run Benchmarks
+        working-directory: ./packages/cactus-cmd-api-server/
+        run: yarn run benchmark
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1.20.3
+        with:
+          tool: 'benchmarkjs'
+          output-file-path: .tmp/benchmark-results/cmd-api-server/run-cmd-api-server-benchmark.ts.log
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Only push the benchmark results to gh-pages website if we are running on the main branch
+          # We do not want to clutter the benchmark results with intermediate results from PRs that could be drafts
+          auto-push: ${{ github.ref == 'refs/heads/main' }}
+
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@hyperledger/cacti-maintainers'
+
+  cactus-common-example-server:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-cmd-socketio-server/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_PATTERN: examples/cactus-common-example-server/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-common-example-server
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -282,6 +547,12 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
 
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-3
+          path: ./code-coverage-ts/**/
 
   cactus-common:
     continue-on-error: false
@@ -290,20 +561,22 @@ jobs:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-common/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: '--files={./packages/cactus-common/src/test/typescript/unit/key-converter.test.ts,./packages/cactus-common/src/test/typescript/unit/logging/logger.test.ts}'
+      TAPE_TEST_PATTERN: './packages/cactus-common/src/test/typescript/unit/logging/logger.test.ts'
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-common
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -311,515 +584,858 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
 
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-4
+          path: ./code-coverage-ts/**/
+
   cactus-core:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-core/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-core
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-5
+          path: ./code-coverage-ts/**/
+
   cactus-core-api:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-core-api/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-core-api
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-carbon-accounting-backend:
+
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-6
+          path: ./code-coverage-ts/**/
+
+  ce-carbon-accounting-backend:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-carbon-accounting-backend/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-carbon-accounting-backend
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: ./examples/cactus-example-carbon-accounting-backend/src/test/typescript/integration/admin-enroll-v1-endpoint.test.ts
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-carbon-accounting-business-logic-plugin:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-7
+          path: ./code-coverage-ts/**/
+
+  ce-carbon-accounting-business-logic-plugin:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-carbon-accounting-business-logic-plugin/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-carbon-accounting-business-logic-plugin
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-carbon-accounting-frontend:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-8
+          path: ./code-coverage-ts/**/
+
+  ce-carbon-accounting-frontend:
     continue-on-error: false
     env:
       DEV_BUILD_DISABLED: false
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-carbon-accounting-frontend/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: true
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-carbon-accounting-frontend
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-supply-chain-backend:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-9
+          path: ./code-coverage-ts/**/
+  ce-supply-chain-backend:
     continue-on-error: false
     env:
+      DUMP_DISK_USAGE_INFO_DISABLED: false
+      FREE_UP_GITHUB_RUNNER_DISK_SPACE_DISABLED: false
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-supply-chain-backend/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-supply-chain-backend
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: '--files={./examples/cactus-example-supply-chain-backend/src/test/typescript/integration/supply-chain-backend-api-calls.test.ts,./examples/cactus-example-supply-chain-backend/src/test/typescript/integration/supply-chain-cli-via-npm-script.test.ts}'
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-supply-chain-business-logic-plugin:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-10
+          path: ./code-coverage-ts/**/
+
+  ce-supply-chain-business-logic-plugin:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-supply-chain-business-logic-plugin/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-supply-chain-business-logic-plugin
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-example-supply-chain-frontend:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-11
+          path: ./code-coverage-ts/**/
+
+  ce-supply-chain-frontend:
     continue-on-error: false
     env:
       DEV_BUILD_DISABLED: false
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: examples/cactus-example-supply-chain-frontend/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: true
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ce-supply-chain-frontend
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-consortium-manual:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-12
+          path: ./code-coverage-ts/**/
+
+  cp-consortium-manual:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-consortium-manual/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-consortium-manual
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-htlc-coordinator-besu:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-13
+          path: ./code-coverage-ts/**/
+
+  cp-htlc-coordinator-besu:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: extensions/cactus-plugin-htlc-coordinator-besu/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-htlc-coordinator-besu
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
         --files={./extensions/cactus-plugin-htlc-coordinator-besu/src/test/typescript/integration/plugin-htlc-coordinator/counterparty-htlc-endpoint.test.ts,./extensions/cactus-plugin-htlc-coordinator-besu/src/test/typescript/integration/plugin-htlc-coordinator/own-htlc-endpoint.test.ts,./extensions/cactus-plugin-htlc-coordinator-besu/src/test/typescript/integration/plugin-htlc-coordinator/refund.test.ts,./extensions/cactus-plugin-htlc-coordinator-besu/src/test/typescript/integration/plugin-htlc-coordinator/withdraw-counterparty-endpoint.test.ts}
-      TAPE_TEST_RUNNER_DISABLED: false
+      TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-htlc-eth-besu:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-14
+          path: ./code-coverage-ts/**/
+
+  cp-htlc-eth-besu:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-htlc-eth-besu/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-htlc-eth-besu
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-htlc-eth-besu-erc20:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-15
+          path: ./code-coverage-ts/**/
+
+  cp-htlc-eth-besu-erc20:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-htlc-eth-besu-erc20/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-htlc-eth-besu-erc20
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-aws-sm:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-16
+          path: ./code-coverage-ts/**/
+
+  cp-keychain-aws-sm:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-aws-sm/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: true
-      TAPE_TEST_PATTERN: '--files={./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/openapi/openapi-validation.test.ts,./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/plugin-factory-keychain.test.ts,./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/plugin-factory-keychain.test.ts,./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/plugin-keychain-aws-sm.test.ts}'
+      JEST_TEST_RUNNER_DISABLED: false
+      TAPE_TEST_PATTERN: '--files={./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/plugin-factory-keychain.test.ts,./packages/cactus-plugin-keychain-aws-sm/src/test/typescript/integration/plugin-factory-keychain.test.ts}'
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-keychain-aws-sm
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-azure-kv:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-17
+          path: ./code-coverage-ts/**/
+
+  cp-keychain-azure-kv:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-azure-kv/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-keychain-azure-kv
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: ./packages/cactus-plugin-keychain-azure-kv/src/test/typescript/integration/plugin-keychain-azure-kv.test.ts
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-google-sm:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-18
+          path: ./code-coverage-ts/**/
+
+  cpk-google-sm:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-google-sm/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: '--files={./packages/cactus-plugin-keychain-google-sm/src/test/typescript/integration/openapi/openapi-validation.test.ts,./packages/cactus-plugin-keychain-google-sm/src/test/typescript/integration/plugin-factory-keychain.test.ts,./packages/cactus-plugin-keychain-google-sm/src/test/typescript/integration/plugin-keychain-google-sm.test.ts}'
-      TAPE_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpk-google-sm
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-memory:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-19
+          path: ./code-coverage-ts/**/
+  cpk-memory:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-memory/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpk-memory
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-memory-wasm:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-20
+          path: ./code-coverage-ts/**/
+  cpk-memory-wasm:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-memory-wasm/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpk-memory-wasm
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: ./packages/cactus-plugin-keychain-memory-wasm/src/test/typescript/unit/plugin-keychain-memory-wasm.test.ts
-      TAPE_TEST_RUNNER_DISABLED: false
+      TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-keychain-vault:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-21
+          path: ./code-coverage-ts/**/
+  cpk-vault:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-keychain-vault/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpk-vault
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: '--files={./packages/cactus-plugin-keychain-vault/src/test/typescript/integration/cactus-keychain-vault-server.test.ts,./packages/cactus-plugin-keychain-vault/src/test/typescript/integration/openapi/openapi-validation.test.ts,./packages/cactus-plugin-keychain-vault/src/test/typescript/integration/plugin-keychain-vault.test.ts}'
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-besu:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-22
+          path: ./code-coverage-ts/**/
+  cpl-connector-aries:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-aries-changed == 'true'
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-aries/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpl-connector-aries
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-23
+          path: ./code-coverage-ts/**/
+  cpl-connector-besu:
+    permissions: write-all
+    continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-besu-changed == 'true'
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-besu/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpl-connector-besu
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/deploy-contract-from-json.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/get-block.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/get-past-logs.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/get-record-locator.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/private-deploy-contract-from-json-cactus.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/private-deploy-contract-from-json-web3-eea.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-deploy-contract-from-json.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-get-balance.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-get-block.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-get-past-logs.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-get-record-locator.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/openapi/openapi-validation.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/v21-besu-get-transaction.test.ts}
+        --files={./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/private-deploy-contract-from-json-web3-eea.test.ts,./packages/cactus-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-ledger-connector-besu/deploy-contract/v21-get-record-locator.test.ts}
       TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-corda:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-24
+          path: ./code-coverage-ts/**/
+
+      - name: Ensure .tmp Directory Exists
+        run: mkdir -p .tmp/benchmark-results/plugin-ledger-connector-besu/
+
+     # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache@v4.0.2
+        with:
+          path: .tmp/benchmark-results/plugin-ledger-connector-besu/
+          key: ${{ runner.os }}-benchmark
+
+      - name: Run Benchmarks
+        working-directory: ./packages/cactus-plugin-ledger-connector-besu/
+        run: yarn run benchmark
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1.20.3
+        with:
+          tool: 'benchmarkjs'
+          output-file-path: .tmp/benchmark-results/plugin-ledger-connector-besu/run-plugin-ledger-connector-besu-benchmark.ts.log
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Only push the benchmark results to gh-pages website if we are running on the main branch
+          # We do not want to clutter the benchmark results with intermediate results from PRs that could be drafts
+          auto-push: ${{ github.ref == 'refs/heads/main' }}
+
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@hyperledger/cacti-maintainers'
+
+  cpl-connector-polkadot:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-corda/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-polkadot/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/deploy-cordapp-jars-to-nodes-v4.7.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/deploy-cordapp-jars-to-nodes-v4.8-express.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/deploy-cordapp-jars-to-nodes-v4.8.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/deploy-cordapp-jars-to-nodes.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/flow-database-access-v4.8.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/jvm-kotlin-spring-server-v4.7.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/jvm-kotlin-spring-server-v4.8.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/openapi/openapi-validation.test.ts}
-      TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpl-connector-polkadot
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-polkadot-changed == 'true'
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-25
+          path: ./code-coverage-ts/**/
+  cpl-connector-corda:
+    continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-corda-changed == 'true'
+    env:
+      FREE_UP_GITHUB_RUNNER_DISK_SPACE_DISABLED: false
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-corda/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpl-connector-corda
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_PATTERN: >-
+        --files={./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/flow-database-access-v4.8.test.ts,./packages/cactus-plugin-ledger-connector-corda/src/test/typescript/integration/openapi/openapi-validation.test.ts}
+      TAPE_TEST_RUNNER_DISABLED: false
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+
+      - run: ./tools/ci.sh
+
+      - name: Upload coverage reports as artifacts
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-26
+          path: ./code-coverage-ts/**/
+
+      - name: build cacti-connector-corda-server-dev.jar
+        working-directory: packages/cactus-plugin-ledger-connector-corda/src/main-server/kotlin/gen/kotlin-spring/
+        run: ./gradlew clean build -Pversion=dev -DrootProjectName=cacti-connector-corda-server
+  
+      - if: ${{ env.RUN_TRIVY_SCAN == 'true' }}
+        name: Run Trivy vulnerability scan for cactus-connector-corda-server
+        uses: aquasecurity/trivy-action@0.19.0
+        with:
+          scan-type: 'rootfs'
+          scan-ref: 'packages/cactus-plugin-ledger-connector-corda/src/main-server/kotlin/gen/kotlin-spring/build/libs/cacti-connector-corda-server-dev.jar'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  cpl-connector-stellar:
+    continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-stellar-changed == 'true'
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cacti-plugin-ledger-connector-stellar/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      TAPE_TEST_RUNNER_DISABLED: true
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpl-connector-stellar
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -827,37 +1443,58 @@ jobs:
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
 
-  plugin-ledger-connector-fabric-0:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-27
+          path: ./code-coverage-ts/**/
+
+  plc-fabric-0:
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     continue-on-error: false
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
-      HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
+      HFC_LOGGING: ''
       FULL_BUILD_DISABLED: true
       FREE_UP_GITHUB_RUNNER_DISK_SPACE_DISABLED: false
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: ""
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/plc-fabric-0
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-28
+          path: ./code-coverage-ts/**/
 
-  plugin-ledger-connector-fabric-1:
+  plc-fabric-1:
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     continue-on-error: false
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
@@ -867,18 +1504,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -887,8 +1523,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/deploy-cc-from-javascript-source.test.ts
 
-  plugin-ledger-connector-fabric-2:
+  plc-fabric-2:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -897,18 +1537,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -917,8 +1556,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/deploy-cc-from-typescript-source.test.ts
 
-  plugin-ledger-connector-fabric-3:
+  plc-fabric-4:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -927,48 +1570,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          path: ./.yarn/
-          restore-keys: |
-            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-      - run: npm run configure
-      - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/deploy-lock-asset.test.ts
-
-  plugin-ledger-connector-fabric-4:
-    continue-on-error: false
-    env:
-      CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
-      HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: true
-      TAPE_TEST_PATTERN: ""
-      TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
-        with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -977,8 +1589,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/openapi/openapi-validation.test.ts
 
-  plugin-ledger-connector-fabric-5:
+  plc-fabric-5:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -987,18 +1603,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1007,8 +1622,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/openapi/openapi-validation-go.test.ts
 
-  plugin-ledger-connector-fabric-6:
+  plc-fabric-6:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1017,18 +1636,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1037,8 +1655,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/unit/identity-internal-crypto-utils.test.ts
 
-  plugin-ledger-connector-fabric-7:
+  plc-fabric-7:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1047,18 +1669,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1067,8 +1688,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/identity-client.test.ts
 
-  plugin-ledger-connector-fabric-8:
+  plc-fabric-8:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1077,18 +1702,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1097,8 +1721,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/run-transaction-with-identities.test.ts
 
-  plugin-ledger-connector-fabric-9:
+  plc-fabric-9:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1107,18 +1735,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1127,7 +1754,11 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/obtain-profiles.test.ts
 
-  plugin-ledger-connector-fabric-10:
+  plc-fabric-10:
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     continue-on-error: false
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
@@ -1137,18 +1768,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1157,8 +1787,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/deploy-cc-from-golang-source.test.ts
 
-  plugin-ledger-connector-fabric-11:
+  plc-fabric-11:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1167,18 +1801,17 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
@@ -1187,8 +1820,12 @@ jobs:
       - run: npm run configure
       - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/add-orgs.test.ts
 
-  plugin-ledger-connector-fabric-12:
+  plc-fabric-12:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       CACTI_NPM_PACKAGE_NAME: "@hyperledger/cactus-plugin-ledger-connector-fabric"
       HFC_LOGGING: '{"debug":"console","info":"console","warn": "console","error":"console"}'
@@ -1197,364 +1834,430 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: true
       TAPE_TEST_PATTERN: ""
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: npm run configure
-      - run: yarn ts-node ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/run-transaction-with-ws-ids.test.ts
+      - run: yarn jest ./packages/cactus-plugin-ledger-connector-fabric/src/test/typescript/integration/fabric-v2-2-x/run-transaction-with-ws-ids.test.ts
 
-  cactus-plugin-ledger-connector-go-ethereum-socketio:
+  cplc-iroha2:
     continue-on-error: false
-    env:
-      DEV_BUILD_DISABLED: false
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-go-ethereum-socketio/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: true
-      TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
-        with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          path: ./.yarn/
-          restore-keys: |
-            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-      - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-iroha:
-    continue-on-error: false
-    env:
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/integration/iroha-iroha-transfer-example.test.ts,./packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/integration/openapi/openapi-validation.test.ts,./packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/integration/run-transaction-endpoint-v1.test.ts,./packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/unit/iroha-test-ledger-parameters.test.ts,./packages/cactus-plugin-ledger-connector-iroha/src/test/typescript/unit/postgres-test-container-parameters.test.ts}
-      TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
-        with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          path: ./.yarn/
-          restore-keys: |
-            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-      - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-iroha2:
-    continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-iroha2-changed == 'true'
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-iroha2/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cplc-iroha2
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-ethereum:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-30
+          path: ./code-coverage-ts/**/
+  cplc-ethereum:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-ethereum-changed == 'true'
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-ethereum/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cplc-ethereum
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-quorum:
-    continue-on-error: false
-    env:
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/openapi/openapi-validation-no-keychain.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/openapi/openapi-validation.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v2.3.0-deploy-contract-from-json-json-object-endpoints.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v2.3.0-deploy-contract-from-json-json-object.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v2.3.0-invoke-contract-json-object-endpoints.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v2.3.0-invoke-contract-json-object.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v21.4.1-deploy-contract-from-json-json-object-endpoints.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v21.4.1-deploy-contract-from-json-json-object.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v21.4.1-invoke-contract-json-object-endpoints.test.ts,./packages/cactus-plugin-ledger-connector-quorum/src/test/typescript/integration/plugin-ledger-connector-quorum/deploy-contract/v21.4.1-invoke-contract-json-object.test.ts}
-      TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
         with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          path: ./.yarn/
-          restore-keys: |
-            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-      - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-sawtooth:
+          name: coverage-reports-31
+          path: ./code-coverage-ts/**/
+  cplc-sawtooth:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-sawtooth/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cplc-sawtooth
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-ledger-connector-xdai:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-32
+          path: ./code-coverage-ts/**/
+  cplc-xdai:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-xdai/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cplc-xdai
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
         --files={./packages/cactus-plugin-ledger-connector-xdai/src/test/typescript/integration/deploy-contract-from-json-xdai-json-object.test.ts,./packages/cactus-plugin-ledger-connector-xdai/src/test/typescript/integration/invoke-contract-xdai-json-object.test.ts,./packages/cactus-plugin-ledger-connector-xdai/src/test/typescript/integration/openapi/openapi-validation-no-keychain.test.ts,./packages/cactus-plugin-ledger-connector-xdai/src/test/typescript/integration/openapi/openapi-validation.test.ts}
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-persistence-ethereum:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-33
+          path: ./code-coverage-ts/**/
+  cpp-ethereum:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-plugin-persistence-ethereum/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpp-ethereum
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-plugin-object-store-ipfs:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-34
+          path: ./code-coverage-ts/**/
+  cpp-fabric:
+    continue-on-error: false
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cactus-plugin-persistence-fabric/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpp-fabric
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    needs: build-dev
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-cpp-fabric
+          path: ./code-coverage-ts/**/
+  cp-object-store-ipfs:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: extensions/cactus-plugin-object-store-ipfs/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-object-store-ipfs
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: '--files={./extensions/cactus-plugin-object-store-ipfs/src/test/typescript/integration/plugin-object-store-ipfs.test.ts,./extensions/cactus-plugin-object-store-ipfs/src/test/typescript/unit/plugin-object-store-ipfs.test.ts}'
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  # cactus-plugin-odap-hermes:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-35
+          path: ./code-coverage-ts/**/
+  # cactus-plugin-satp-hermes:
   #   continue-on-error: false
   #   env:
   #     FULL_BUILD_DISABLED: true
-  #     JEST_TEST_PATTERN: packages/cactus-plugin-odap-hermes/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+  #     JEST_TEST_PATTERN: packages/cactus-plugin-satp-hermes/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
   #     JEST_TEST_RUNNER_DISABLED: false
   #     TAPE_TEST_RUNNER_DISABLED: true
   #   needs: build-dev
-  #   runs-on: ubuntu-20.04
+  #   runs-on: ubuntu-22.04
   #   steps:
   #     - name: Use Node.js ${{ env.NODEJS_VERSION }}
-  #       uses: actions/setup-node@v3.6.0
+  #       uses: actions/setup-node@v4.0.3
   #       with:
   #         node-version: ${{ env.NODEJS_VERSION }}
-  #     - uses: actions/checkout@v3.5.2
+  #     - uses: actions/checkout@v4.1.7
   #     - id: yarn-cache-dir-path
   #       name: Get yarn cache directory path
-  #       run: echo "::set-output name=dir::$(yarn cache dir)"
+  #       run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
   #     - id: yarn-cache
   #       name: Restore Yarn Cache
-  #       uses: actions/cache@v3.3.1
+  #       uses: actions/cache@v4.0.2
   #       with:
   #         key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
   #         path: ./.yarn/
   #         restore-keys: |
   #           ${{ runner.os }}-yarn-
   #     - run: ./tools/ci.sh
-  cactus-plugin-connector-ubiquity:
+  cp-bungee-hermes:
     continue-on-error: false
     env:
+      # Otherwise it fails with: You are running out of disk space.
+      # The runner will stop working when the machine runs out of disk space.
+      # Free space left: 26 MB
+      FREE_UP_GITHUB_RUNNER_DISK_SPACE_DISABLED: false
       FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-plugin-ledger-connector-ubiquity/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_PATTERN: packages/cactus-plugin-bungee-hermes/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-bungee-hermes
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
-      UBIQUITY_AUTH_TOKEN: ${{ secrets.UBIQUITY_AUTH_TOKEN }}
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-        env:
-         UBIQUITY_AUTH_TOKEN: ${{ secrets.UBIQUITY_AUTH_TOKEN }}
-  cactus-test-api-client:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-36
+          path: ./code-coverage-ts/**/
+  ct-api-client:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-api-client/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ct-api-client
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-test-cmd-api-server:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-37
+          path: ./code-coverage-ts/**/
+  ct-cmd-api-server:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.cmd-api-server-changed == 'true'
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-cmd-api-server/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: ./packages/cactus-test-cmd-api-server/src/test/typescript/integration/plugin-import-with-npm-install-version-selection.test.ts
-      TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ct-cmd-api-server
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-test-plugin-consortium-manual:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-38
+          path: ./code-coverage-ts/**/
+  ct-geth-ledger:
+    continue-on-error: false
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cactus-test-geth-ledger/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ct-geth-ledger
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    needs: build-dev
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-39
+          path: ./code-coverage-ts/**/
+  ctp-consortium-manual:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
@@ -1562,50 +2265,67 @@ jobs:
       JEST_TEST_RUNNER_DISABLED: false
       TAPE_TEST_PATTERN: ./packages/cactus-test-plugin-consortium-manual/src/test/typescript/integration/plugin-consortium-manual/openapi/openapi-validation.test.ts
       TAPE_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cpt-consortium-manual
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-test-plugin-htlc-eth-besu:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-40
+          path: ./code-coverage-ts/**/
+  ctp-htlc-eth-besu:
     continue-on-error: false
     env:
+      ETHERSCAN_KEY:  ${{ secrets.ETHERSCAN_KEY }}
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-plugin-htlc-eth-besu/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ctp-htlc-eth-besu
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: '--files={./packages/cactus-test-plugin-htlc-eth-besu/src/test/typescript/integration/plugin-htlc-eth-besu/get-single-status-endpoint.test.ts,./packages/cactus-test-plugin-htlc-eth-besu/src/test/typescript/integration/plugin-htlc-eth-besu/openapi/openapi-validation.test.ts}'
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-41
+          path: ./code-coverage-ts/**/
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -1613,452 +2333,298 @@ jobs:
       - name: Run solidity tests
         run: cd packages/cactus-plugin-htlc-eth-besu && forge test -vvvvv
 
-  cactus-test-plugin-htlc-eth-besu-erc20:
+  ctp-htlc-eth-besu-erc20:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-plugin-htlc-eth-besu-erc20/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ctp-htlc-eth-besu-erc20
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
         --files={./packages/cactus-test-plugin-htlc-eth-besu-erc20/src/test/typescript/integration/plugin-htlc-eth-besu-erc20/get-status-endpoint.test.ts,./packages/cactus-test-plugin-htlc-eth-besu-erc20/src/test/typescript/integration/plugin-htlc-eth-besu-erc20/openapi/openapi-validation.test.ts,./packages/cactus-test-plugin-htlc-eth-besu-erc20/src/test/typescript/integration/plugin-htlc-eth-besu-erc20/refund-endpoint.test.ts}
       TAPE_TEST_RUNNER_DISABLED: false
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-test-plugin-ledger-connector-besu:
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-42
+          path: ./code-coverage-ts/**/
+  ctp-ledger-connector-besu:
     continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-fabric-changed == 'true'
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ctp-ledger-connector-besu
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-balance-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-block-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-past-logs-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-transaction-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-balance-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-block-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-past-logs-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-transaction-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-sign-transaction-endpoint.test.ts}
+        --files={./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-block-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-past-logs-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/get-transaction-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-block-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-get-past-logs-endpoint.test.ts,./packages/cactus-test-plugin-ledger-connector-besu/src/test/typescript/integration/plugin-validator-besu/v21-sign-transaction-endpoint.test.ts}
       TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
-  cactus-test-plugin-ledger-connector-quorum:
-    continue-on-error: false
-    env:
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-test-plugin-ledger-connector-quorum/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_RUNNER_DISABLED: true
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
         with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-          path: ./.yarn/
-          restore-keys: |
-            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
-      - run: ./tools/ci.sh
-  cactus-test-plugin-ledger-connector-ethereum:
+          name: coverage-reports-43
+          path: ./code-coverage-ts/**/
+  ctp-ledger-connector-ethereum:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-test-plugin-ledger-connector-ethereum/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/ctp-ledger-connector-ethereum
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-      - id: yarn-cache-dir-path
-        name: Get yarn cache directory path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/checkout@v4.1.7
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.0.4
-        with:
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-      - run: ./tools/ci.sh
-  cactus-test-tooling:
-    continue-on-error: false
-    env:
-      FULL_BUILD_DISABLED: true
-      JEST_TEST_PATTERN: packages/cactus-test-tooling/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
-      JEST_TEST_RUNNER_DISABLED: false
-      TAPE_TEST_PATTERN: >-
-        --files={./packages/cactus-test-tooling/src/test/typescript/integration/besu/besu-test-ledger/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/fabric/fabric-test-ledger-v1/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/iroha/iroha-test-ledger/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/postgres/postgres-test-container/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/quorum/quorum-test-ledger/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/rustc-container/rustc-container-target-bundler.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/substrate/substrate-test-ledger-constructor.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/substrate/substrate-test-ledger-multiple-concurrent.test.ts}
-      TAPE_TEST_RUNNER_DISABLED: false
-    needs: build-dev
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
-        with:
-          node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
-
-      - id: yarn-cache
-        name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-44
+          path: ./code-coverage-ts/**/
+  cactus-test-tooling:
+    continue-on-error: false
+    needs:
+      - build-dev
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.test-tooling-changed == 'true'
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_PATTERN: packages/cactus-test-tooling/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-test-tooling
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_PATTERN: >-
+        --files={./packages/cactus-test-tooling/src/test/typescript/integration/besu/besu-test-ledger/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/fabric/fabric-test-ledger-v1/constructor-validates-options.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/substrate/substrate-test-ledger-constructor.test.ts,./packages/cactus-test-tooling/src/test/typescript/integration/substrate/substrate-test-ledger-multiple-concurrent.test.ts}
+      TAPE_TEST_RUNNER_DISABLED: false
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-45
+          path: ./code-coverage-ts/**/
   cactus-verifier-client:
     continue-on-error: false
     env:
       FULL_BUILD_DISABLED: true
       JEST_TEST_PATTERN: packages/cactus-verifier-client/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
       JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cactus-verifier-client
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
       TAPE_TEST_RUNNER_DISABLED: true
     needs: build-dev
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - id: yarn-cache
         name: Restore Yarn Cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.0.2
         with:
           key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
           path: ./.yarn/
           restore-keys: |
             ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
       - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-46
+          path: ./code-coverage-ts/**/
+  cp-consortium-static:
+    continue-on-error: false
+    env:
+      FULL_BUILD_DISABLED: true
+      JEST_TEST_RUNNER_DISABLED: false
+      JEST_TEST_PATTERN: packages/cacti-plugin-consortium-static/src/test/typescript/(unit|integration|benchmark)/.*/*.test.ts
+      JEST_TEST_COVERAGE_PATH: ./code-coverage-ts/cp-consortium-static
+      JEST_TEST_CODE_COVERAGE_ENABLED: true
+      TAPE_TEST_RUNNER_DISABLED: true
+    needs: build-dev
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Use Node.js ${{ env.NODEJS_VERSION }}
+        uses: actions/setup-node@v4.0.3
+        with:
+          node-version: ${{ env.NODEJS_VERSION }}
+      - uses: actions/checkout@v4.1.7
+
+      - id: yarn-cache
+        name: Restore Yarn Cache
+        uses: actions/cache@v4.0.2
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+          path: ./.yarn/
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('./yarn.lock') }}
+      - run: ./tools/ci.sh
+        if: ${{ env.RUN_CODE_COVERAGE == 'true' }}
+      - name: Upload coverage reports as artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: coverage-reports-47
+          path: ./code-coverage-ts/**/
   ghcr-besu-all-in-one:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-besu-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/besu-all-in-one/ -f ./tools/docker/besu-all-in-one/Dockerfile -t cactus-besu-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-besu-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-besu-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-cmd-api-server:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-cmd-api-server
-        run: DOCKER_BUILDKIT=1 docker build . -f ./packages/cactus-cmd-api-server/Dockerfile -t cactus-cmd-api-server
-      - name: Run Trivy vulnerability scan for cactus-cmd-api-server
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-cmd-api-server'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-connector-besu:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-connector-besu
-        run: DOCKER_BUILDKIT=1 docker build ./packages/cactus-plugin-ledger-connector-besu/ -f ./packages/cactus-plugin-ledger-connector-besu/Dockerfile -t cactus-connector-besu
-      - name: Run Trivy vulnerability scan for cactus-connector-besu
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-connector-besu'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/besu-all-in-one/ -f ./tools/docker/besu-all-in-one/Dockerfile
   ghcr-connector-corda-server:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    needs:
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.plugin-ledger-connector-corda-changed == 'true'
+
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-connector-corda-server
         run: DOCKER_BUILDKIT=1 docker build ./packages/cactus-plugin-ledger-connector-corda/src/main-server/ -f ./packages/cactus-plugin-ledger-connector-corda/src/main-server/Dockerfile -t cactus-connector-corda-server
-      - name: Run Trivy vulnerability scan for cactus-connector-corda-server
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-connector-corda-server'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-connector-fabric:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-connector-fabric
-        run: DOCKER_BUILDKIT=1 docker build ./packages/cactus-plugin-ledger-connector-fabric/ -f ./packages/cactus-plugin-ledger-connector-fabric/Dockerfile -t cactus-connector-fabric
-      - name: Run Trivy vulnerability scan for cactus-connector-fabric
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-connector-fabric'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-corda-all-in-one:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-corda-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/corda-all-in-one/ -f ./tools/docker/corda-all-in-one/Dockerfile -t cactus-corda-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-corda-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-corda-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+         
   ghcr-corda-all-in-one-flowdb:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-corda-all-in-one-flowdb
         run: DOCKER_BUILDKIT=1 docker build ./tools/docker/corda-all-in-one/corda-v4_8-flowdb/
-  ghcr-corda-all-in-one-obligation:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-corda-all-in-one-obligation
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/corda-all-in-one/ -f ./tools/docker/corda-all-in-one/corda-v4_8/Dockerfile -t cactus-corda-all-in-one-obligation
-      - name: Run Trivy vulnerability scan for cactus-corda-all-in-one-obligation
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-corda-all-in-one-obligation'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+
   ghcr-dev-container-vscode:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    needs:
+      - compute_changed_packages
+    if: needs.compute_changed_packages.outputs.ghcr-dev-container-vscode-changed == 'true'
     env:
       IMAGE_NAME: cacti-dev-container-vscode
     steps:
       - name: Use Node.js ${{ env.NODEJS_VERSION }}
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.3
         with:
           node-version: ${{ env.NODEJS_VERSION }}
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: npm_install_@devcontainers/cli@0.44.0
         run: npm install -g @devcontainers/cli@0.44.0
       - name: npx_yes_devcontainers_cli_build
-        run: npx --yes @devcontainers/cli@0.44.0 build --workspace-folder=./ --log-level=trace --push=false --config=./.devcontainer/devcontainer.json --image-name=$IMAGE_NAME
+        run: npx --yes @devcontainers/cli@0.44.0 build --workspace-folder="./" --log-level=trace --push=false --config="./.devcontainer/devcontainer.json" --image-name="$IMAGE_NAME"
   ghcr-example-carbon-accounting:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-example-carbon-accounting
-        run: DOCKER_BUILDKIT=1 docker build . -f ./examples/carbon-accounting/Dockerfile -t cactus-example-carbon-accounting
-      - name: Run Trivy vulnerability scan for cactus-example-carbon-accounting
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-example-carbon-accounting'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+        run: DOCKER_BUILDKIT=1 docker build . -f ./examples/carbon-accounting/Dockerfile
+
   ghcr-example-supply-chain-app:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-example-supply-chain-app
-        run: DOCKER_BUILDKIT=1 docker build . -f ./examples/supply-chain-app/Dockerfile -t cactus-example-supply-chain-app
-      - name: Run Trivy vulnerability scan for cactus-example-supply-chain-app
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-example-supply-chain-app'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-fabric-all-in-one:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-fabric-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/fabric-all-in-one/ -f ./tools/docker/fabric-all-in-one/Dockerfile_v1.4.x -t cactus-fabric-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-fabric-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-fabric-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+        run: DOCKER_BUILDKIT=1 docker build . -f ./examples/cactus-example-supply-chain-backend/Dockerfile -t cactus-example-supply-chain-app
+
   ghcr-fabric2-all-in-one:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-fabric2-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/fabric-all-in-one/ -f ./tools/docker/fabric-all-in-one/Dockerfile_v2.x -t cactus-fabric2-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-fabric2-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-fabric2-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-iroha-all-in-one:
-    runs-on: ubuntu-20.04
+        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/fabric-all-in-one/ -f ./tools/docker/fabric-all-in-one/Dockerfile_v2.x
+
+  ghcr-daml-all-in-one:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-iroha-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/iroha-all-in-one/ -f ./tools/docker/iroha-all-in-one/Dockerfile -t cactus-iroha-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-iroha-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-iroha-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+      - uses: actions/checkout@v4.1.1
+      - name: ghcr.io/hyperledger/daml-all-in-one
+        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/daml-all-in-one/ -f ./tools/docker/daml-all-in-one/Dockerfile
+
   ghcr-keychain-vault-server:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
       - name: ghcr.io/hyperledger/cactus-keychain-vault-server
         run: DOCKER_BUILDKIT=1 docker build ./packages/cactus-plugin-keychain-vault/src/cactus-keychain-vault-server/ -f ./packages/cactus-plugin-keychain-vault/src/cactus-keychain-vault-server/Dockerfile -t cactus-keychain-vault-server
-      - name: Run Trivy vulnerability scan for cactus-keychain-vault-server
-        uses: aquasecurity/trivy-action@0.11.2
+      - if: ${{ env.RUN_TRIVY_SCAN == 'true' }}
+        name: Run Trivy vulnerability scan for cactus-keychain-vault-server
+        uses: aquasecurity/trivy-action@0.19.0
         with:
           image-ref: 'cactus-keychain-vault-server'
           format: 'table'
           exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-quorum-all-in-one:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-quorum-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/quorum-all-in-one/ -f ./tools/docker/quorum-all-in-one/Dockerfile -t cactus-quorum-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-quorum-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-quorum-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-quorum-multi-party-all-in-one:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-quorum-multi-party-all-in-one
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/quorum-multi-party-all-in-one/ -f ./tools/docker/quorum-multi-party-all-in-one/Dockerfile -t cactus-quorum-multi-party-all-in-one
-      - name: Run Trivy vulnerability scan for cactus-quorum-multi-party-all-in-one
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-quorum-multi-party-all-in-one'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-rust-compiler:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-rust-compiler
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/rust-compiler/ -f ./tools/docker/rust-compiler/Dockerfile -t cactus-rust-compiler
-      - name: Run Trivy vulnerability scan for cactus-rust-compiler
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-rust-compiler'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-test-npm-registry:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-test-npm-registry
-        run: DOCKER_BUILDKIT=1 docker build ./tools/docker/test-npm-registry/ -f ./tools/docker/test-npm-registry/Dockerfile -t cactus-test-npm-registry
-      - name: Run Trivy vulnerability scan for cactus-test-npm-registry
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-test-npm-registry'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-  ghcr-whitepaper:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: ghcr.io/hyperledger/cactus-whitepaper
-        run: DOCKER_BUILDKIT=1 docker build ./whitepaper/ -f ./whitepaper/Dockerfile -t cactus-whitepaper
-      - name: Run Trivy vulnerability scan for cactus-whitepaper
-        uses: aquasecurity/trivy-action@0.11.2
-        with:
-          image-ref: 'cactus-whitepaper'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
+          ignore-unfixed: false
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 name: Cactus_CI

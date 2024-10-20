@@ -5,22 +5,42 @@
 name: Unit Test Relay
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_call:
+    inputs:
+      run_all:
+        required: true
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: relay-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  check_code_changed:
+    outputs:
+      relay_changed: ${{ steps.changes.outputs.relay_changed }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.1.7
+
+      - uses: dorny/paths-filter@v2.11.1
+        id: changes
+        with:
+          filters: |
+            relay_changed:
+              - './weaver/common/protos/**'
+              - './weaver/common/protos-rs/**'
+              - './weaver/core/relay/**'
+              - '.github/workflows/test_weaver-relay.yaml'
+
   unit_test_relay_local:
+    needs: check_code_changed
+    if:  inputs.run_all == 'true' || needs.check_code_changed.outputs.relay_changed == 'true'
     # if: ${{ false }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - name: Install RUST Toolchain minimal stable with clippy and rustfmt
         uses: actions-rs/toolchain@v1.0.6
@@ -67,11 +87,13 @@ jobs:
         working-directory: weaver/core/relay
 
   unit_test_relay_tls_local:
+    needs: check_code_changed
+    if:  inputs.run_all == 'true' || needs.check_code_changed.outputs.relay_changed == 'true'
     # if: ${{ false }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - name: Install RUST Toolchain minimal stable with clippy and rustfmt
         uses: actions-rs/toolchain@v1.0.6
@@ -118,11 +140,12 @@ jobs:
         working-directory: weaver/core/relay
 
   unit_test_relay:
-    if: ${{ false }}
-    runs-on: ubuntu-latest
+    needs: check_code_changed
+    if: ${{ false && needs.check_code_changed.outputs.relay_changed == 'true' }}
+    runs-on: ubuntu-22.04
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - name: Install RUST Toolchain minimal stable with clippy and rustfmt
         uses: actions-rs/toolchain@v1.0.6
@@ -157,11 +180,12 @@ jobs:
         working-directory: weaver/core/relay
 
   unit_test_relay_tls:
-    if: ${{ false }}
-    runs-on: ubuntu-latest
+    needs: check_code_changed
+    if: ${{ false && needs.check_code_changed.outputs.relay_changed == 'true' }}
+    runs-on: ubuntu-22.04
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3.5.2
+      - uses: actions/checkout@v4.1.7
 
       - name: Install RUST Toolchain minimal stable with clippy and rustfmt
         uses: actions-rs/toolchain@v1.0.6
